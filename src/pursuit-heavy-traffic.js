@@ -1,6 +1,13 @@
 (() => {
-  Object.assign(ENVIRONMENTS[0], { cops:2, copPower:.72, startGap:460 });
-  Object.assign(ENVIRONMENTS[1], { cops:3, copPower:.84, startGap:390 });
+  const levelCops=[1,2,3,4];
+  ENVIRONMENTS.forEach((env,i)=>Object.assign(env,{
+    cops:levelCops[i]||1,
+    copPower:.80,
+    startGap:440,
+    difficulty:`${levelCops[i]} ${levelCops[i]===1?'PATTUGLIA':'PATTUGLIE'}`,
+    stars:levelCops[i],
+  }));
+  buildMenu();
 
   function candidateSamples(g, minDistance, maxDistance) {
     const out = [];
@@ -24,7 +31,7 @@
   }
 
   function makeCop(g, desiredRelative, index) {
-    const gap = g.env.startGap || 360;
+    const gap = g.env.startGap || 440;
     const desiredWorld = g.player.angle + desiredRelative;
     const samples = candidateSamples(g, gap*.68, gap*1.55);
     let pick = null;
@@ -58,7 +65,7 @@
     const sectors=[Math.PI, -Math.PI/2, Math.PI/2, 0, Math.PI*.72, -Math.PI*.72];
     this.cops.push(makeCop(this,sectors[0],0));
     for(let i=1;i<count;i++){
-      const baseDelay=this.env.id==='neon'?9.5:this.env.id==='docks'?6.5:5.0;
+      const baseDelay=8.5;
       this._pendingCops.push({delay:baseDelay*i + hash(i*47)*2.4,sector:sectors[i%sectors.length],index:i});
     }
   };
