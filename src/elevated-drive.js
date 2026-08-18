@@ -1,6 +1,7 @@
 (() => {
   const input=window.NightDriveInput=window.NightDriveInput||{};
   const baseUpdatePlayer=Game.prototype.updatePlayer;
+  const baseUpdateCops=Game.prototype.updateCops;
 
   function pathProgress(path,x,y){
     if(!path?.points?.length)return 0;
@@ -40,7 +41,6 @@
         }
       }
 
-      // Flyovers are the fast route: no traffic lights and a modest higher cruising speed.
       if(p._roadLevel===1&&p.speed>0){
         const throttle=clamp(input.throttle||0,0,1);
         if(throttle>.03)p.speed=Math.min(218,p.speed+34*throttle*dt);
@@ -52,5 +52,14 @@
       if(p._roadLevel===1)toast('SOPRAELEVATA · VIA RAPIDA');
       else toast('RITORNO ALLA VIABILITÀ URBANA');
     }
+  };
+
+  Game.prototype.updateCops=function(dt){
+    if(this.env.propMode!=='city'||!this.road){baseUpdateCops.call(this,dt);return;}
+    const playerLevel=this.player?._roadLevel||0;
+    this.road._preferredLevel=0;
+    for(const c of this.cops)c._roadLevel=0;
+    baseUpdateCops.call(this,dt);
+    this.road._preferredLevel=playerLevel;
   };
 })();
