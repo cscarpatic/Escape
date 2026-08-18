@@ -47,10 +47,7 @@
       if(remove.size)this.paths=this.paths.filter(p=>!remove.has(p.id));
       const valid=new Set(this.paths.map(p=>p.id));for(const n of this.nodes)n.edges=n.edges.filter(id=>valid.has(id));
       const byId=new Map(this.paths.map(p=>[p.id,p])),seen=new Set();let components=0;
-      for(const n of this.nodes){
-        if(seen.has(n.id)||!n.edges.length)continue;components++;const q=[n];seen.add(n.id);
-        while(q.length){const cur=q.pop();for(const eid of cur.edges){const p=byId.get(eid);if(!p)continue;const other=this.nodeMap.get(p.nodeA===cur.id?p.nodeB:p.nodeA);if(other&&!seen.has(other.id)){seen.add(other.id);q.push(other);}}}
-      }
+      for(const n of this.nodes){if(seen.has(n.id)||!n.edges.length)continue;components++;const q=[n];seen.add(n.id);while(q.length){const cur=q.pop();for(const eid of cur.edges){const p=byId.get(eid);if(!p)continue;const other=this.nodeMap.get(p.nodeA===cur.id?p.nodeB:p.nodeA);if(other&&!seen.has(other.id)){seen.add(other.id);q.push(other);}}}}
       this.integrity.components=components;
     }
   };
