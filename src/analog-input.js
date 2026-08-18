@@ -1,6 +1,7 @@
 (() => {
   const input = window.NightDriveInput = window.NightDriveInput || {};
   input.steer ??= 0;
+  input.throttle ??= 0;
   input.reverse ??= 0;
   input.vertical ??= 0;
 
@@ -28,23 +29,30 @@
 
     input.steer = shapedAxis(rawX,.11,1.48);
     input.vertical = rawY;
+    const throttleRaw = clamp((-rawY-.18)/.82,0,1);
     const reverseRaw = clamp((rawY-.28)/.72,0,1);
+    input.throttle = Math.pow(throttleRaw,1.08);
     input.reverse = Math.pow(reverseRaw,1.12);
 
     knob.style.transform = `translate(calc(-50% + ${rawX*radius}px), calc(-50% + ${rawY*radius}px))`;
-    joystick.classList.toggle('is-active', Math.abs(input.steer)>.02 || input.reverse>.02);
+    joystick.classList.toggle('is-active', Math.abs(input.steer)>.02 || input.throttle>.02 || input.reverse>.02);
+    joystick.classList.toggle('is-throttle', input.throttle>.08);
     joystick.classList.toggle('is-reverse', input.reverse>.08);
     joystick.setAttribute('aria-valuenow',String(Math.round(input.steer*100)));
-    joystick.setAttribute('aria-valuetext',input.reverse>.08 ? `Retromarcia ${Math.round(input.reverse*100)}%, sterzo ${Math.round(input.steer*100)}%` : `Sterzo ${Math.round(input.steer*100)}%`);
+    const steerText=`sterzo ${Math.round(input.steer*100)}%`;
+    if(input.reverse>.08) joystick.setAttribute('aria-valuetext',`Retromarcia ${Math.round(input.reverse*100)}%, ${steerText}`);
+    else if(input.throttle>.08) joystick.setAttribute('aria-valuetext',`Gas ${Math.round(input.throttle*100)}%, ${steerText}`);
+    else joystick.setAttribute('aria-valuetext',`Sterzo ${Math.round(input.steer*100)}%`);
   }
 
   function resetJoystick() {
     pointerId = null;
     input.steer = 0;
+    input.throttle = 0;
     input.reverse = 0;
     input.vertical = 0;
     if (knob) knob.style.transform = 'translate(-50%,-50%)';
-    joystick?.classList.remove('is-active','is-reverse');
+    joystick?.classList.remove('is-active','is-throttle','is-reverse');
     joystick?.setAttribute('aria-valuenow','0');
     joystick?.setAttribute('aria-valuetext','Sterzo 0%');
   }
@@ -75,9 +83,10 @@
 
   Game.prototype.updatePlayer = function (dt) {
     const p = this.player;
-    const up = keys.has('ArrowUp') || keys.has('KeyW');
+    const keyUp = keys.has('ArrowUp') || keys.has('KeyW');
     const brake = keys.has('ArrowDown') || keys.has('KeyS');
     const keyReverse = keys.has('KeyZ');
+    const throttlePower = keyUp ? 1 : clamp(input.throttle || 0,0,1);
     const reversePower = keyReverse ? 1 : clamp(input.reverse || 0,0,1);
     const reverse = reversePower > .06;
     const left = keys.has('ArrowLeft') || keys.has('KeyA');
@@ -101,13 +110,13 @@
         p.speed -= lerp(42,92,reversePower) * dt;
       }
     } else {
-      if (up) p.speed += accel * dt;
+      if (throttlePower > .025) p.speed += accel * throttlePower * dt;
       else if (p.speed > 0) p.speed = Math.max(0, p.speed - 24 * dt);
       else if (p.speed < 0) p.speed = Math.min(0, p.speed + 30 * dt);
 
       if (brake) {
-        if (p.speed > 0) p.speed = Math.max(0, p.speed - 145 * dt);
-        else if (p.speed < 0) p.speed = Math.min(0, p.speed + 105 * dt);
+        if (p.speed > 0) p.speed = Math.max(0, p.speed - 155 * dt);
+        else if (p.speed < 0) p.speed = Math.min(0, p.speed + 110 * dt);
       }
     }
 
