@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="mobile.css" />
   <link rel="stylesheet" href="tuning.css" />
   <link rel="stylesheet" href="drift.css" />
-  <link rel="stylesheet" href="analog.css" />
+  <link rel="stylesheet" href="analog.css?v=20260818-4" />
 </head>
 <body>
   <canvas id="game" aria-label="Night Heist Escape"></canvas>
@@ -29,15 +29,15 @@
       <div class="controls-card">
         <div class="controls-title">CONTROLLI</div>
         <div class="controls-grid desktop-control-note">
-          <span><kbd>W</kbd>/<kbd>↑</kbd> accelera</span><span><kbd>S</kbd>/<kbd>↓</kbd> frena</span><span><kbd>Z</kbd> retromarcia</span><span><kbd>A</kbd><kbd>D</kbd> sterza</span><span><kbd>SPAZIO</kbd> freno a mano</span><span><kbd>SHIFT</kbd>/<kbd>X</kbd> derapata 90°→180°</span>
+          <span><kbd>W</kbd>/<kbd>↑</kbd> accelera</span><span><kbd>S</kbd>/<kbd>↓</kbd> frena</span><span><kbd>Z</kbd> retromarcia</span><span><kbd>A</kbd><kbd>D</kbd> intenzione di svolta</span><span><kbd>SPAZIO</kbd> freno a mano</span><span><kbd>SHIFT</kbd>/<kbd>X</kbd> derapata 90°→180°</span>
         </div>
         <div class="controls-grid mobile-control-note">
-          <span>JOYSTICK: sterzo progressivo + assist</span><span>GAS / FRENO a destra</span><span>RETRO dedicata</span><span>DRIFT + joystick: 90°→180°</span>
+          <span>JOYSTICK: indica la strada da prendere</span><span>↓ JOYSTICK: retromarcia</span><span>GAS / FRENO a destra</span><span>DRIFT + joystick: 90°→180°</span>
         </div>
       </div>
       <button id="startButton" class="primary-button">AVVIA LA FUGA <span>↗</span></button>
     </div>
-    <div class="menu-footer"><span>Visuale relativa all’auto</span><i></i><span>Guida assistita</span><i></i><span>Desktop + iPhone/iPad</span></div>
+    <div class="menu-footer"><span>Auto 65% / Manuale 35% al L1</span><i></i><span>Guida assistita</span><i></i><span>Desktop + iPhone/iPad</span></div>
   </main>
 
   <section id="hud" class="hud hidden" aria-live="polite">
@@ -58,15 +58,14 @@
   </section>
 
   <section id="touchControls" class="touch-controls hidden" aria-label="Controlli touch">
-    <div class="touch-zone touch-zone--steer" aria-label="Sterzo analogico assistito">
-      <div id="steeringJoystick" class="steering-joystick" role="slider" aria-label="Sterzo progressivo assistito" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="0">
+    <div class="touch-zone touch-zone--steer" aria-label="Sterzo analogico assistito e retromarcia">
+      <div id="steeringJoystick" class="steering-joystick" role="slider" aria-label="Sterzo assistito; trascina in basso per la retromarcia" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="0" aria-valuetext="Sterzo 0%">
         <div class="joystick-knob"></div><span class="joystick-label">STERZO</span>
       </div>
     </div>
     <div class="touch-zone touch-zone--center" aria-label="Comandi di manovra">
       <button class="touch-control touch-control--handbrake" data-code="Space" aria-label="Freno a mano" aria-pressed="false">FRENO A MANO</button>
       <button class="touch-control touch-control--drift" data-code="ShiftLeft" aria-label="Derapata progressiva" aria-pressed="false">DRIFT</button>
-      <button class="touch-control touch-control--reverse" data-code="KeyZ" aria-label="Retromarcia" aria-pressed="false">RETRO</button>
     </div>
     <div class="touch-zone touch-zone--pedals" aria-label="Pedali">
       <button class="touch-control touch-control--pedal touch-control--brake" data-code="ArrowDown" aria-label="Frena" aria-pressed="false"><span><strong>▼</strong>FRENO</span></button>
@@ -99,14 +98,14 @@
   <script src="src/city-grid-v2.js"></script>
   <script src="src/traffic-signals.js"></script>
   <script src="src/reverse-control.js"></script>
-  <script src="src/analog-input.js?v=20260818-2"></script>
+  <script src="src/analog-input.js?v=20260818-4"></script>
   <script src="src/drift-control.js"></script>
   <script src="src/rotating-view.js"></script>
   <script src="src/city-grid-visuals.js"></script>
   <script src="src/city-road-renderer.js?v=20260818-1"></script>
   <script src="src/traffic-visibility.js"></script>
   <script src="src/day-mode.js?v=20260818-3"></script>
-  <script src="src/driving-assist-v2.js?v=20260818-2"></script>
+  <script src="src/driving-assist-v2.js?v=20260818-4"></script>
   <script src="src/pursuit-heavy-traffic.js?v=20260818-2"></script>
 </body>
 </html>
