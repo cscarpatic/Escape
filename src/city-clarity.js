@@ -35,7 +35,7 @@
 
       const valid=new Set(this.paths.map(p=>p.id));
       for(const n of this.nodes) n.edges=(n.edges||[]).filter(id=>valid.has(id));
-      this.boundaries=[]; // remove the old dotted/bollard corridor treatment
+      this.boundaries=[];
       this.trafficLights=this.nodes.filter(n=>{
         const q=cityNode(n.id);return q&&q.col>=1&&q.col<=3&&q.row%8===0&&n.edges.length>=3;
       });
@@ -88,8 +88,6 @@
     }
 
     regenerateBuildings(){
-      // Old props were based on the denser road grid. Rebuild them only inside valid blocks,
-      // which guarantees no invisible building collision can exist on a road.
       this.props=[];
       let seed=9000;
       for(const b of this.cityBlocks){
@@ -119,8 +117,11 @@
     this._curbHit=Math.max(0,(this._curbHit||0)-dt);
     for(const b of this.road.cityBlocks){
       if(this.player.y<b.top-120||this.player.y>b.bottom+120||this.player.x<b.left-120||this.player.x>b.right+120) continue;
-      pushOutRect(this.player,b,true,this);
-      for(const c of this.cops) pushOutRect(c,b,false,this);
+      if(!b.driveThrough && !(this.player._roadLevel===1 && b.underElevated)) pushOutRect(this.player,b,true,this);
+      if(!b.driveThrough) for(const c of this.cops) {
+        if(c._roadLevel===1 && b.underElevated) continue;
+        pushOutRect(c,b,false,this);
+      }
     }
   };
 
