@@ -49,7 +49,7 @@
 
   function releaseAll() {
     heldPointers.clear();
-    ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'ShiftLeft', 'ShiftRight', 'KeyX'].forEach(code => keys.delete(code));
+    ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'ShiftLeft', 'ShiftRight', 'KeyX', 'KeyZ'].forEach(code => keys.delete(code));
     touchControls.querySelectorAll('[data-code]').forEach(button => setControlState(button, false));
   }
 
