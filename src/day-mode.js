@@ -100,8 +100,7 @@
 
     const previousFog = g.env.fog;
     g.env.fog = -4.1363636364;
-    baseNightMask(g);
-    g.env.fog = previousFog;
+    try { baseNightMask(g); } finally { g.env.fog = previousFog; }
 
     ctx.save();
     ctx.globalCompositeOperation = 'screen';
@@ -117,6 +116,7 @@
   const baseDrawProps = drawProps;
 
   function polygon(points, fill, stroke, width=1) {
+    if (!points.length) return;
     ctx.beginPath();
     ctx.moveTo(points[0].x, points[0].y);
     for (let i=1;i<points.length;i++) ctx.lineTo(points[i].x, points[i].y);
