@@ -1,10 +1,16 @@
 (() => {
-  const input = window.NightDriveInput = window.NightDriveInput || { steer:0, reverse:0 };
+  const input = window.NightDriveInput = window.NightDriveInput || { steer:0, throttle:0, reverse:0 };
 
-  Object.assign(ENVIRONMENTS[0], { steerAssist:2.55, laneAssist:1.45, cornerAssist:1.34, followAssist:1.42, manualShare:.35 });
-  Object.assign(ENVIRONMENTS[1], { steerAssist:2.00, laneAssist:1.20, cornerAssist:1.16, followAssist:1.22, manualShare:.42 });
-  Object.assign(ENVIRONMENTS[2], { steerAssist:1.22, laneAssist:.84, cornerAssist:.90, followAssist:.92, manualShare:.50 });
-  Object.assign(ENVIRONMENTS[3], { steerAssist:.78, laneAssist:.60, cornerAssist:.68, followAssist:.72, manualShare:.58 });
+  // Driving difficulty is intentionally identical in every environment.
+  // For now, level difficulty is defined by the number of pursuing police cars.
+  ENVIRONMENTS.forEach(env => Object.assign(env, {
+    steerAssist:2.55,
+    laneAssist:1.45,
+    cornerAssist:1.34,
+    followAssist:1.42,
+    manualShare:.35,
+    offroadMax:108,
+  }));
 
   function pathMap(road) {
     if (!road._assistPathMap || road._assistPathMapSize !== road.paths.length) {
@@ -116,7 +122,6 @@
       return {...side[0],matchedIntent:true,automatic:false,intentDir:intent.dir};
     }
 
-    // The player asked for a side road that does not exist: stay on the most natural continuation.
     return {...straight,matchedIntent:false,automatic:true,blockedIntent:true,intentDir:intent.dir};
   }
 
@@ -155,7 +160,6 @@
     p._roadAssist ||= {route:null,intent:null};
     const assist=p._roadAssist;
 
-    // A brief touch left/right is remembered as an intention to take the next valid side road.
     if(manual>.085){
       assist.intent={dir:Math.sign(steer),strength:clamp(manual,0,1),expires:now+1800};
     } else if(assist.intent && now>assist.intent.expires){
@@ -197,7 +201,7 @@
 
     const laneAssist=this.env.laneAssist||.7;
     const followAssist=this.env.followAssist||.8;
-    const manualShare=clamp(this.env.manualShare??.42,.2,.75);
+    const manualShare=clamp(this.env.manualShare??.35,.2,.75);
     const autoShare=1-manualShare;
     const currentDir=travelDirection(info,p.angle);
     const speedFactor=clamp(Math.abs(p.speed)/150,0,1);
@@ -236,8 +240,6 @@
     const headingRate=(3.15+followAssist*4.25)*(1+autoShare*.30);
     p.angle=angleLerp(p.angle,desiredAngle,clamp(dt*headingRate,0,.18));
 
-    // Lane centering stays strong even while the player nudges the stick; manual input expresses intent,
-    // it does not allow the car to drift into a wall when no matching road exists.
     const manualRelax=assist.route?.matchedIntent ? .88 : lerp(1,.78,manual);
     const pull=clamp(dt*laneAssist*(1.55+edgeRatio*2.15)*(1+autoShare*.40)*manualRelax,0,.075);
     p.x=lerp(p.x,info.x,pull);
