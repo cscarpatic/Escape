@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="mobile.css" />
   <link rel="stylesheet" href="tuning.css" />
   <link rel="stylesheet" href="drift.css" />
+  <link rel="stylesheet" href="analog.css" />
 </head>
 <body>
   <canvas id="game" aria-label="Night Heist Escape"></canvas>
@@ -28,15 +29,15 @@
       <div class="controls-card">
         <div class="controls-title">CONTROLLI</div>
         <div class="controls-grid desktop-control-note">
-          <span><kbd>W</kbd>/<kbd>↑</kbd> accelera</span><span><kbd>S</kbd>/<kbd>↓</kbd> frena / retro</span><span><kbd>A</kbd><kbd>D</kbd> sterza</span><span><kbd>SPAZIO</kbd> freno a mano</span><span><kbd>SHIFT</kbd>/<kbd>X</kbd> derapata 90°→180°</span>
+          <span><kbd>W</kbd>/<kbd>↑</kbd> accelera</span><span><kbd>S</kbd>/<kbd>↓</kbd> frena</span><span><kbd>Z</kbd> retromarcia</span><span><kbd>A</kbd><kbd>D</kbd> sterza</span><span><kbd>SPAZIO</kbd> freno a mano</span><span><kbd>SHIFT</kbd>/<kbd>X</kbd> derapata 90°→180°</span>
         </div>
         <div class="controls-grid mobile-control-note">
-          <span>TOUCH: sterzo a sinistra</span><span>pedali a destra</span><span>DRIFT + sterzo: 90°→180°</span>
+          <span>JOYSTICK: sterzo progressivo</span><span>GAS / FRENO a destra</span><span>RETRO dedicata</span><span>DRIFT + joystick: 90°→180°</span>
         </div>
       </div>
       <button id="startButton" class="primary-button">AVVIA LA FUGA <span>↗</span></button>
     </div>
-    <div class="menu-footer"><span>Rete stradale procedurale</span><i></i><span>Desktop + iPhone/iPad</span><i></i><span>GitHub Pages ready</span></div>
+    <div class="menu-footer"><span>Visuale relativa all’auto</span><i></i><span>Desktop + iPhone/iPad</span><i></i><span>GitHub Pages ready</span></div>
   </main>
 
   <section id="hud" class="hud hidden" aria-live="polite">
@@ -57,9 +58,20 @@
   </section>
 
   <section id="touchControls" class="touch-controls hidden" aria-label="Controlli touch">
-    <div class="touch-zone touch-zone--steer" aria-label="Sterzo"><button class="touch-control" data-code="ArrowLeft" aria-label="Sterza a sinistra" aria-pressed="false">‹</button><button class="touch-control" data-code="ArrowRight" aria-label="Sterza a destra" aria-pressed="false">›</button></div>
-    <div class="touch-zone touch-zone--center" aria-label="Comandi di manovra"><button class="touch-control touch-control--handbrake" data-code="Space" aria-label="Freno a mano" aria-pressed="false">FRENO A MANO</button><button class="touch-control touch-control--drift" data-code="ShiftLeft" aria-label="Derapata progressiva" aria-pressed="false">DRIFT</button></div>
-    <div class="touch-zone touch-zone--pedals" aria-label="Pedali"><button class="touch-control touch-control--pedal touch-control--brake" data-code="ArrowDown" aria-label="Frena o retromarcia" aria-pressed="false"><span><strong>▼</strong>FRENO</span></button><button class="touch-control touch-control--pedal" data-code="ArrowUp" aria-label="Accelera" aria-pressed="false"><span><strong>▲</strong>GAS</span></button></div>
+    <div class="touch-zone touch-zone--steer" aria-label="Sterzo analogico">
+      <div id="steeringJoystick" class="steering-joystick" role="slider" aria-label="Sterzo progressivo" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="0">
+        <div class="joystick-knob"></div><span class="joystick-label">STERZO</span>
+      </div>
+    </div>
+    <div class="touch-zone touch-zone--center" aria-label="Comandi di manovra">
+      <button class="touch-control touch-control--handbrake" data-code="Space" aria-label="Freno a mano" aria-pressed="false">FRENO A MANO</button>
+      <button class="touch-control touch-control--drift" data-code="ShiftLeft" aria-label="Derapata progressiva" aria-pressed="false">DRIFT</button>
+      <button class="touch-control touch-control--reverse" data-code="KeyZ" aria-label="Retromarcia" aria-pressed="false">RETRO</button>
+    </div>
+    <div class="touch-zone touch-zone--pedals" aria-label="Pedali">
+      <button class="touch-control touch-control--pedal touch-control--brake" data-code="ArrowDown" aria-label="Frena" aria-pressed="false"><span><strong>▼</strong>FRENO</span></button>
+      <button class="touch-control touch-control--pedal" data-code="ArrowUp" aria-label="Accelera" aria-pressed="false"><span><strong>▲</strong>GAS</span></button>
+    </div>
   </section>
 
   <div id="orientationHint" class="orientation-hint hidden">Ruota l’iPhone/iPad in orizzontale per una visuale migliore</div>
@@ -85,6 +97,10 @@
   <script src="src/accessibility-pass.js"></script>
   <script src="src/city-clarity.js"></script>
   <script src="src/traffic-signals.js"></script>
+  <script src="src/reverse-control.js"></script>
+  <script src="src/analog-input.js"></script>
   <script src="src/drift-control.js"></script>
+  <script src="src/rotating-view.js"></script>
+  <script src="src/traffic-visibility.js"></script>
 </body>
 </html>
