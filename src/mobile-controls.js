@@ -35,7 +35,7 @@
       keys.add(code);
       setControlState(button, true);
       button.setPointerCapture?.(event.pointerId);
-      if (navigator.vibrate) navigator.vibrate(8);
+      if (navigator.vibrate) navigator.vibrate(code === 'ShiftLeft' ? 14 : 8);
     }, { passive: false });
     ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(type => {
       button.addEventListener(type, event => {
@@ -49,7 +49,7 @@
 
   function releaseAll() {
     heldPointers.clear();
-    ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].forEach(code => keys.delete(code));
+    ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'ShiftLeft', 'ShiftRight', 'KeyX'].forEach(code => keys.delete(code));
     touchControls.querySelectorAll('[data-code]').forEach(button => setControlState(button, false));
   }
 
