@@ -3,11 +3,7 @@
 
   const CITY_XS = [-760, -380, 0, 380, 760];
   const BLOCK_H = 660;
-  const ROUNDABOUT_RADIUS = 96;
-  const ROUNDABOUT_ROAD_WIDTH = 126;
-
   const normalId = (r,c) => `C${r}_${c}`;
-  const roundId = (r,c,d) => `CRA${r}_${c}_${d}`;
 
   RoadNetwork = class RoadNetwork extends PreviousRoadNetwork {
     constructor(env) {
@@ -25,7 +21,10 @@
       this.boundaries = [];
       this.cityBlocks = [];
       this.roundabouts = [];
+      this.elevatedRoutes = [];
+      this.diagonalCells = new Set();
       this.trafficLights = [];
+      this._preferredLevel = 0;
 
       const total = this.env.escapeKm * 1000 + 1700;
       const rows = Math.max(10, Math.ceil(total / BLOCK_H));
@@ -34,130 +33,155 @@
       this.cityXs = [...CITY_XS];
       this.cityY = Y;
 
-      // Deliberately sparse and readable: only a few roundabouts in the whole level.
-      const roundaboutSet = new Set();
-      [[2,1],[5,3],[8,1]].forEach(([r,c]) => { if (r < rows) roundaboutSet.add(`${r}:${c}`); });
-      const isRoundabout = (r,c) => roundaboutSet.has(`${r}:${c}`);
-
-      // Build all junctions first. A roundabout replaces the normal intersection with
-      // four real entry nodes, so no road ever passes through its central island.
       for (let r=0; r<=rows; r++) {
         for (let c=0; c<CITY_XS.length; c++) {
-          const x=CITY_XS[c], y=Y(r);
-          if (isRoundabout(r,c)) {
-            this.node(roundId(r,c,'N'), x, y-ROUNDABOUT_RADIUS, 'roundabout-entry');
-            this.node(roundId(r,c,'E'), x+ROUNDABOUT_RADIUS, y, 'roundabout-entry');
-            this.node(roundId(r,c,'S'), x, y+ROUNDABOUT_RADIUS, 'roundabout-entry');
-            this.node(roundId(r,c,'W'), x-ROUNDABOUT_RADIUS, y, 'roundabout-entry');
-            this.roundabouts.push({r,c,x,y,radius:ROUNDABOUT_RADIUS,island:35});
-          } else {
-            this.node(normalId(r,c), x, y, 'city-junction');
-          }
+          this.node(normalId(r,c), CITY_XS[c], Y(r), 'city-junction');
         }
       }
-
-      const port = (r,c,d) => isRoundabout(r,c)
-        ? this.nodeMap.get(roundId(r,c,d))
-        : this.nodeMap.get(normalId(r,c));
 
       const add = (a,b,opt={}) => {
         const p=this.edge(a,b,opt);
         if (opt.width) p.width=opt.width;
         if (opt.trafficWeight !== undefined) p.trafficWeight=opt.trafficWeight;
+        if (opt.level !== undefined) p.level=opt.level;
+        if (opt.feature) p.feature=opt.feature;
         return p;
       };
 
+      const verticalWidths = [190, 150, 214, 162, 184];
       const vertical = Array.from({length:rows},()=>Array(CITY_XS.length));
 
-      // Five continuous north/south streets. The centre is the main boulevard;
-      // the two outer streets are larger urban arterials; the others are local streets.
+      // Five coherent continuous axes, deliberately different in width.
       for (let r=0; r<rows; r++) {
         for (let c=0; c<CITY_XS.length; c++) {
           const arterial = c===0 || c===2 || c===4;
           vertical[r][c] = add(
-            port(r,c,'S'), port(r+1,c,'N'),
+            this.nodeMap.get(normalId(r,c)), this.nodeMap.get(normalId(r+1,c)),
             {
-              kind: arterial ? 'state' : 'city',
-              stage:r,
-              curve:0,
-              width:c===2 ? 188 : arterial ? 174 : 154,
-              trafficWeight:c===2 ? .42 : arterial ? .34 : .22,
+              kind: arterial ? 'state' : 'city', stage:r, curve:0,
+              width:verticalWidths[c],
+              trafficWeight:c===2 ? .42 : arterial ? .32 : .20,
               trafficTrait:r<2?'clear':undefined,
+              level:0,
             }
           );
         }
       }
 
-      // One coherent cross street per block row. Every third one is a broader avenue.
+      // Cross streets have a consistent hierarchy: avenue, collector, local street.
       for (let r=0; r<=rows; r++) {
-        const arterial = r % 3 === 0;
+        const width = r%4===0 ? 194 : r%2===0 ? 166 : 146;
+        const arterial = width>=190;
         for (let c=0; c<CITY_XS.length-1; c++) {
           add(
-            port(r,c,'E'), port(r,c+1,'W'),
+            this.nodeMap.get(normalId(r,c)), this.nodeMap.get(normalId(r,c+1)),
             {
-              kind: arterial ? 'state' : 'city',
-              stage:Math.max(0,Math.min(rows-1,r-1)),
-              curve:0,
-              width:arterial ? 176 : 152,
-              trafficWeight:arterial ? .34 : .20,
+              kind:arterial?'state':'city',
+              stage:Math.max(0,Math.min(rows-1,r-1)), curve:0, width,
+              trafficWeight:arterial?.34:width>150?.25:.18,
               trafficTrait:r<2?'clear':undefined,
-              feature:'fourway',
+              feature:'fourway', level:0,
             }
           );
         }
       }
 
-      // True circular roundabouts. Roads terminate at their entry nodes and the four
-      // quarter-circle edges are the only way around the central island.
-      for (const rb of this.roundabouts) {
-        const n=this.nodeMap.get(roundId(rb.r,rb.c,'N'));
-        const e=this.nodeMap.get(roundId(rb.r,rb.c,'E'));
-        const s=this.nodeMap.get(roundId(rb.r,rb.c,'S'));
-        const w=this.nodeMap.get(roundId(rb.r,rb.c,'W'));
-        this.addRoundaboutArc(n,e,rb,-Math.PI/2,0);
-        this.addRoundaboutArc(e,s,rb,0,Math.PI/2);
-        this.addRoundaboutArc(s,w,rb,Math.PI/2,Math.PI);
-        this.addRoundaboutArc(w,n,rb,Math.PI,Math.PI*1.5);
+      // Occasional single-block diagonals. They always connect two real junctions and never
+      // cross another same-level road except at their endpoints.
+      const diagonalSpecs=[];
+      for(let r=2, k=0; r<rows-1; r+=5, k++) {
+        const c = k%2===0 ? 0 : 3;
+        const toC = k%2===0 ? 1 : 2;
+        const a=this.nodeMap.get(normalId(r,c));
+        const b=this.nodeMap.get(normalId(r+1,toC));
+        const p=add(a,b,{
+          kind:'city', stage:r, curve:0, width:138, trafficWeight:.14,
+          trafficTrait:'clear', feature:'diagonal', level:0,
+        });
+        diagonalSpecs.push(p);
+        this.diagonalCells.add(`${r}:${Math.min(c,toC)}`);
       }
 
-      // A motorway stays outside the blocks. Only two or three explicit junctions connect
-      // it to the eastern city avenue, so it never slices through the neighbourhoods.
+      // Elevated express shortcuts. They cross the city on level 1; all ordinary roads remain
+      // on level 0 and continue underneath. Only the two ramps connect the two levels.
+      const elevatedMain=[];
+      let flyIndex=0;
+      for(let r=3; r+4<=rows; r+=7, flyIndex++) {
+        const fromC=flyIndex%2===0?1:3;
+        const toC=flyIndex%2===0?3:1;
+        const groundA=this.nodeMap.get(normalId(r,fromC));
+        const groundB=this.nodeMap.get(normalId(r+4,toC));
+        if(!groundA||!groundB) continue;
+
+        const dx=groundB.x-groundA.x,dy=groundB.y-groundA.y,len=Math.hypot(dx,dy)||1;
+        const ux=dx/len,uy=dy/len;
+        const elevatedA=this.node(`EL${flyIndex}A`,groundA.x+ux*185,groundA.y+uy*185,'elevated');
+        const elevatedB=this.node(`EL${flyIndex}B`,groundB.x-ux*185,groundB.y-uy*185,'elevated');
+
+        const up=add(groundA,elevatedA,{
+          kind:'state',stage:r,curve:18,width:122,trafficWeight:.025,
+          trafficTrait:'clear',feature:'elevated-ramp',level:1,
+        });
+        up.rampDirection='up';up.groundNode=groundA.id;up.elevatedNode=elevatedA.id;
+
+        const deck=add(elevatedA,elevatedB,{
+          kind:'state',stage:r+1,curve:flyIndex%2===0?34:-34,width:148,trafficWeight:.055,
+          trafficTrait:'clear',feature:'elevated',level:1,
+        });
+        deck.elevatedIndex=flyIndex;
+        elevatedMain.push(deck);
+
+        const down=add(elevatedB,groundB,{
+          kind:'state',stage:r+3,curve:-18,width:122,trafficWeight:.025,
+          trafficTrait:'clear',feature:'elevated-ramp',level:1,
+        });
+        down.rampDirection='down';down.groundNode=groundB.id;down.elevatedNode=elevatedB.id;
+
+        this.elevatedRoutes.push({index:flyIndex,up,deck,down,from:groundA,to:groundB});
+      }
+
+      // Peripheral motorway remains separate from the city.
       const hx=1180, highway=[];
       for (let r=0;r<=rows;r++) highway[r]=this.node(`CH${r}`,hx,Y(r),'highway');
       for (let r=0;r<rows;r++) add(highway[r],highway[r+1],{
-        kind:'highway',stage:r,curve:10,width:222,trafficWeight:.58,trafficTrait:'clear'
+        kind:'highway',stage:r,curve:10,width:226,trafficWeight:.58,trafficTrait:'clear',level:0
       });
       for (let r=3;r<rows;r+=4) {
-        add(port(r,4,'E'),highway[r],{
-          kind:'state',stage:Math.max(0,r-1),curve:-46,width:164,
-          trafficWeight:.24,trafficTrait:'clear',feature:'interchange'
+        add(this.nodeMap.get(normalId(r,4)),highway[r],{
+          kind:'state',stage:Math.max(0,r-1),curve:-46,width:168,
+          trafficWeight:.24,trafficTrait:'clear',feature:'interchange',level:0
         });
       }
 
-      // Blocks are derived from the finished roads, never the other way around.
-      // This makes it geometrically impossible for a building to sit on a carriageway.
+      const passesElevated = block => elevatedMain.some(path => {
+        if(path.maxX<block.left-90||path.minX>block.right+90||path.maxY<block.top-90||path.minY>block.bottom+90) return false;
+        return path.points.some(q=>q.x>block.left-75&&q.x<block.right+75&&q.y>block.top-75&&q.y<block.bottom+75);
+      });
+
+      // Blocks derive from the finished ground network. Diagonal cells become open/parking
+      // blocks so the diagonal is physically driveable; blocks below flyovers are kept flat.
       for (let r=0;r<rows;r++) {
         const yTop=Y(r), yBottom=Y(r+1);
-        const topHalf=(r%3===0?176:152)/2;
-        const bottomHalf=((r+1)%3===0?176:152)/2;
+        const topWidth=r%4===0?194:r%2===0?166:146;
+        const bottomWidth=(r+1)%4===0?194:(r+1)%2===0?166:146;
         for (let c=0;c<CITY_XS.length-1;c++) {
-          const leftWidth=(c===0||c===2||c===4)?(c===2?188:174):154;
-          const rightCol=c+1;
-          const rightWidth=(rightCol===0||rightCol===2||rightCol===4)?(rightCol===2?188:174):154;
-          const left=CITY_XS[c]+leftWidth/2+28;
-          const right=CITY_XS[c+1]-rightWidth/2-28;
-          const top=Math.min(yTop,yBottom)+topHalf+30;
-          const bottom=Math.max(yTop,yBottom)-bottomHalf-30;
+          const left=CITY_XS[c]+verticalWidths[c]/2+28;
+          const right=CITY_XS[c+1]-verticalWidths[c+1]/2-28;
+          const top=Math.min(yTop,yBottom)+topWidth/2+30;
+          const bottom=Math.max(yTop,yBottom)-bottomWidth/2-30;
           if (right-left<90 || bottom-top<130) continue;
+          const diagonal=this.diagonalCells.has(`${r}:${c}`);
+          const block={left,right,top,bottom,row:r,col:c,seed:r*100+c};
+          const underElevated=passesElevated(block);
           const h=hash(r*97+c*31+17);
-          const type=h<.14?'park':h<.24?'parking':'buildings';
-          const block={left,right,top,bottom,row:r,col:c,type,seed:r*100+c};
+          block.underElevated=underElevated;
+          block.driveThrough=diagonal;
+          block.type=(diagonal||underElevated)?'parking':h<.14?'park':h<.24?'parking':'buildings';
           this.cityBlocks.push(block);
-          if (type==='buildings') this.populateBlock(block);
+          if (block.type==='buildings') this.populateBlock(block);
         }
       }
 
-      // Traffic lights only on actual normal intersections, never on a roundabout.
       this.trafficLights=this.nodes.filter(n=>{
         const m=/^C(\d+)_(\d+)$/.exec(n.id||'');
         if(!m) return false;
@@ -167,78 +191,53 @@
 
       for (let r=0;r<rows;r++) {
         this.stages.push({
-          index:r,
-          startY:Y(r)+90,
-          endY:Y(r+1)-90,
-          centerX:0,
-          endX:0,
-          left:vertical[r][1]||vertical[r][0],
-          right:vertical[r][3]||vertical[r][4],
+          index:r,startY:Y(r)+90,endY:Y(r+1)-90,centerX:0,endX:0,
+          left:vertical[r][1]||vertical[r][0],right:vertical[r][3]||vertical[r][4],
           midY:(Y(r)+Y(r+1))/2,
         });
       }
 
-      // Brighter asphalt/curbs for the night level.
       this.env.road='#26343f';
       this.env.shoulder='#6c747a';
       this.env.lane='#eef2f4';
     }
 
-    addRoundaboutArc(a,b,rb,start,end) {
-      const points=[];
-      const samples=12;
-      for(let i=0;i<=samples;i++){
-        const t=i/samples,ang=lerp(start,end,t);
-        points.push({x:rb.x+Math.cos(ang)*rb.radius,y:rb.y+Math.sin(ang)*rb.radius});
-      }
-      let length=0;for(let i=1;i<points.length;i++)length+=dist2(points[i-1],points[i]);
-      const xs=points.map(p=>p.x),ys=points.map(p=>p.y);
-      const id=`R${this.edgeId++}`;
-      const p={
-        id,branch:this.edgeId,stage:Math.max(0,rb.r-1),kind:'city',trafficTrait:'clear',
-        trait:'ROTATORIA · LIBERA',points,length,width:ROUNDABOUT_ROAD_WIDTH,
-        minX:Math.min(...xs),maxX:Math.max(...xs),minY:Math.min(...ys),maxY:Math.max(...ys),midX:rb.x,
-        nodeA:a.id,nodeB:b.id,trafficWeight:.001,feature:'roundabout',oneWay:1,level:0,topology:true,
-      };
-      this.paths.push(p);a.edges.push(id);b.edges.push(id);return p;
-    }
-
     populateBlock(block) {
       const w=block.right-block.left,h=block.bottom-block.top;
-      const cols=w>250?2:1;
-      const rows=h>360?2:1;
+      const cols=w>250?2:1,rows=h>360?2:1;
       let k=0;
       for(let iy=0;iy<rows;iy++) for(let ix=0;ix<cols;ix++) {
         const x=lerp(block.left,block.right,(ix+1)/(cols+1));
         const y=lerp(block.top,block.bottom,(iy+1)/(rows+1));
         this.props.push({
-          x:x+randRange(block.seed*37+k,-18,18),
-          y:y+randRange(block.seed*41+k,-24,24),
+          x:x+randRange(block.seed*37+k,-18,18),y:y+randRange(block.seed*41+k,-24,24),
           side:0,seed:12000+block.seed*10+k,mode:'city'
         });
         k++;
       }
     }
-  };
 
-  function pushFromRoundaboutIsland(car,rb,player,g) {
-    const dx=car.x-rb.x,dy=car.y-rb.y,d=Math.hypot(dx,dy),min=rb.island+(car.width||28)*.52;
-    if(d>=min) return false;
-    const nx=d>.001?dx/d:1,ny=d>.001?dy/d:0;
-    car.x=rb.x+nx*(min+1);car.y=rb.y+ny*(min+1);
-    car.speed*=player?.60:.76;
-    if(player) g.camera.shake=Math.max(g.camera.shake,3.5);
-    return true;
-  }
+    _nearestInfoLevel(x,y,filter) {
+      let best={d:Infinity,x:0,y:0,tx:0,ty:-1,path:null,index:0};
+      for(const p of this.nearbyPaths(y,1400)) {
+        if(filter&&!filter(p)) continue;
+        if(x<p.minX-700||x>p.maxX+700) continue;
+        for(let i=1;i<p.points.length;i++) {
+          const a=p.points[i-1],b=p.points[i],vx=b.x-a.x,vy=b.y-a.y,len2=vx*vx+vy*vy||1;
+          const t=clamp(((x-a.x)*vx+(y-a.y)*vy)/len2,0,1),px=a.x+vx*t,py=a.y+vy*t,d=Math.hypot(x-px,y-py);
+          if(d<best.d){const l=Math.sqrt(len2);best={d,x:px,y:py,tx:vx/l,ty:vy/l,path:p,index:i-1};}
+        }
+      }
+      return best;
+    }
 
-  const previousUpdate=Game.prototype.update;
-  Game.prototype.update=function(dt){
-    previousUpdate.call(this,dt);
-    if(this.finished||this.env.propMode!=='city'||!this.road.roundabouts) return;
-    for(const rb of this.road.roundabouts){
-      if(Math.abs(rb.y-this.player.y)>850) continue;
-      pushFromRoundaboutIsland(this.player,rb,true,this);
-      for(const cop of this.cops) pushFromRoundaboutIsland(cop,rb,false,this);
+    nearestInfoAny(x,y) { return this._nearestInfoLevel(x,y,null); }
+
+    nearestInfo(x,y) {
+      if(this.env.propMode!=='city') return super.nearestInfo(x,y);
+      const level=this._preferredLevel||0;
+      const best=this._nearestInfoLevel(x,y,p=>p.feature==='elevated-ramp'||(p.level||0)===level);
+      return best.path?best:this._nearestInfoLevel(x,y,null);
     }
   };
 })();
