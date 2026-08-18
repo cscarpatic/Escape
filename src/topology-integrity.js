@@ -24,9 +24,6 @@
     constructor(env){super(env);this.integrity={removedBypasses:0,removedCrossings:0,components:0};this.enforceTopology();}
     enforceTopology(){
       const remove=new Set();
-
-      // A roundabout replaces its central intersection. If an older/direct edge would
-      // let a vehicle drive straight through the island, remove that bypass.
       const groups=new Map();
       for(const n of this.nodes.filter(n=>n.type==='roundabout')){
         const key=n.id.replace(/R[NEWS]$/,'');if(!groups.has(key))groups.set(key,new Set());groups.get(key).add(n.id);
@@ -45,9 +42,6 @@
           }
         }
       }
-
-      // Same-level centerlines may only cross if they share a graph node. Explicit
-      // bridge/underpass levels are exempt. This is the anti-overlap safety pass.
       const candidates=this.paths.filter(p=>!remove.has(p.id));
       for(let i=0;i<candidates.length;i++){
         const a=candidates[i];if(remove.has(a.id))continue;
