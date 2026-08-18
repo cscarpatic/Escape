@@ -61,4 +61,9 @@
     previousRender();
     if (game && state !== 'menu') drawTrafficAwareness(game);
   };
+
+  const lightingScript = document.createElement('script');
+  lightingScript.src = 'src/day-mode.js';
+  lightingScript.defer = true;
+  document.body.appendChild(lightingScript);
 })();
