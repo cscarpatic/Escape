@@ -1,5 +1,4 @@
 (() => {
-  const STORAGE_KEY = 'night-heist-lighting';
   const DAY_PALETTES = {
     neon:   { ground:'#aebcb2', road:'#4b555d', shoulder:'#c8c7c0', lane:'#fff8e8', skyGlow:[255,226,170], fog:.01, rain:.12 },
     docks:  { ground:'#b9b19e', road:'#55534f', shoulder:'#cfc5b1', lane:'#fff4df', skyGlow:[255,218,160], fog:.025, rain:.08 },
@@ -13,10 +12,6 @@
   }]));
 
   let lightingMode = 'day';
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved === 'day' || saved === 'night') lightingMode = saved;
-  } catch (_) {}
 
   const style = document.createElement('style');
   style.textContent = `
@@ -81,7 +76,6 @@
     if (next !== 'day' && next !== 'night') return;
     lightingMode = next;
     window.NightHeistLighting = lightingMode;
-    try { localStorage.setItem(STORAGE_KEY, lightingMode); } catch (_) {}
     applyPalettes();
     syncUI();
     if (announce && typeof toast === 'function') toast(lightingMode === 'day' ? 'MODALITÀ GIORNO' : 'MODALITÀ NOTTE');
