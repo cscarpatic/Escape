@@ -87,8 +87,15 @@
     );
     if(!eligible.length)return;
     const target=this.env.propMode==='industrial'?7:this.env.propMode==='city'?5:3;
+    const used=new Set();
     for(let i=0;i<target;i++){
-      const path=eligible[Math.floor(hash(800+i*61)*eligible.length)%eligible.length];
+      let path=null;
+      for(let attempt=0;attempt<eligible.length;attempt++){
+        const idx=Math.floor(hash(800+i*61+attempt*17)*eligible.length)%eligible.length;
+        const candidate=eligible[idx];
+        if(!used.has(candidate.id)){path=candidate;used.add(candidate.id);break;}
+      }
+      path ||= eligible[i%eligible.length];
       const garbage=this.env.propMode==='city' && i%3===0;
       const direction=hash(910+i*29)<.14?-1:1;
       const speed=garbage?randRange(1000+i,20,31):path.kind==='highway'?randRange(1100+i,38,55):randRange(1200+i,27,43);
