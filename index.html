@@ -11,6 +11,7 @@
   <title>Night Heist Escape</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="mobile.css" />
+  <link rel="stylesheet" href="tuning.css" />
 </head>
 <body>
   <canvas id="game" aria-label="Night Heist Escape"></canvas>
@@ -64,7 +65,7 @@
     <div class="hud-top-right">
       <div class="heat-label"><span>RICERCA</span><span id="heatText">★★★☆☆</span></div>
       <div class="heat-track"><div id="heatBar" class="heat-fill"></div></div>
-      <div id="copDistance" class="cop-distance">PATTUGLIA: 120 m</div>
+      <div id="copDistance" class="cop-distance">POLIZIA PIÙ VICINA: 120 m</div>
     </div>
 
     <div id="junctionHint" class="junction-hint hidden">
@@ -127,5 +128,6 @@
   <script src="src/game-4.js"></script>
   <script src="src/mobile-controls.js"></script>
   <script src="src/game-5.js"></script>
+  <script src="src/gameplay-assist.js"></script>
 </body>
 </html>
