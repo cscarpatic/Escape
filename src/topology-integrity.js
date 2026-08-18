@@ -53,7 +53,6 @@
         const a=candidates[i];if(remove.has(a.id))continue;
         for(let j=i+1;j<candidates.length;j++){
           const b=candidates[j];if(remove.has(b.id)||sharesNode(a,b)||levelOf(a)!==levelOf(b))continue;
-          // Ramps belonging to the same interchange may weave at different implied ramp heights.
           if(a.kind==='ramp'&&b.kind==='ramp'&&a.stage===b.stage)continue;
           if(!pathsCross(a,b))continue;
           const pa=priority(a),pb=priority(b);
@@ -65,13 +64,11 @@
       if(remove.size)this.paths=this.paths.filter(p=>!remove.has(p.id));
       const valid=new Set(this.paths.map(p=>p.id));
       for(const n of this.nodes)n.edges=n.edges.filter(id=>valid.has(id));
-
-      // Count connected components for diagnostics. Normal roads should form one main
-      // network; isolated decorative fragments are never created intentionally.
+      const byId=new Map(this.paths.map(p=>[p.id,p]));
       const seen=new Set();let components=0;
       for(const n of this.nodes){
         if(seen.has(n.id)||!n.edges.length)continue;components++;const q=[n];seen.add(n.id);
-        while(q.length){const cur=q.pop();for(const eid of cur.edges){const p=this.paths.find(x=>x.id===eid);if(!p)continue;const other=this.nodeMap.get(p.nodeA===cur.id?p.nodeB:p.nodeA);if(other&&!seen.has(other.id)){seen.add(other.id);q.push(other);}}}
+        while(q.length){const cur=q.pop();for(const eid of cur.edges){const p=byId.get(eid);if(!p)continue;const other=this.nodeMap.get(p.nodeA===cur.id?p.nodeB:p.nodeA);if(other&&!seen.has(other.id)){seen.add(other.id);q.push(other);}}}
       }
       this.integrity.components=components;
     }
