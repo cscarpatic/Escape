@@ -15,10 +15,10 @@
 
   const style = document.createElement('style');
   style.textContent = `
-    .time-mode-selector{display:flex;gap:8px;align-items:center;margin:-8px 0 20px;padding:6px;border:1px solid rgba(255,255,255,.10);border-radius:13px;background:rgba(0,0,0,.18);width:max-content;max-width:100%}
-    .time-mode-selector span{padding:0 8px;color:#91a2b4;font-size:9px;font-weight:900;letter-spacing:.15em;text-transform:uppercase}
-    .time-mode-button{min-width:94px;padding:9px 13px;border:1px solid rgba(255,255,255,.10);border-radius:9px;background:rgba(255,255,255,.035);color:#aebccc;font:800 10px/1 system-ui,sans-serif;letter-spacing:.10em;cursor:pointer}
-    .time-mode-button.active{color:#081018;background:#eff8fb;border-color:#fff;box-shadow:0 5px 20px rgba(255,240,185,.20)}
+    .time-mode-selector{display:flex;gap:8px;align-items:center;margin:0 0 18px;padding:7px;border:1px solid rgba(255,255,255,.14);border-radius:13px;background:rgba(0,0,0,.24);width:max-content;max-width:100%;position:relative;z-index:2}
+    .time-mode-selector span{padding:0 8px;color:#a9b7c5;font-size:9px;font-weight:900;letter-spacing:.15em;text-transform:uppercase}
+    .time-mode-button{min-width:104px;padding:10px 14px;border:1px solid rgba(255,255,255,.16);border-radius:9px;background:rgba(255,255,255,.055);color:#d3dfeb;font:900 10px/1 system-ui,sans-serif;letter-spacing:.10em;cursor:pointer}
+    .time-mode-button.active{color:#081018;background:#f3fbfd;border-color:#fff;box-shadow:0 5px 20px rgba(255,240,185,.24)}
     body.day-mode{--bg:#c5cec6}
     body.day-mode #game{background:#aebcb2}
     body.day-mode #vignette{background:radial-gradient(circle at 50% 44%,transparent 52%,rgba(34,45,45,.05) 78%,rgba(24,31,33,.20) 130%)}
@@ -26,7 +26,8 @@
     body.day-mode .panel{background:linear-gradient(145deg,rgba(17,25,29,.88),rgba(19,28,32,.76));box-shadow:0 30px 90px rgba(25,35,35,.25),inset 0 1px rgba(255,255,255,.08)}
     body.day-mode .environment-card{background:rgba(255,255,255,.045)}
     body.day-mode .hud{filter:drop-shadow(0 2px 2px rgba(0,0,0,.14))}
-    @media (max-width:560px){.time-mode-selector{width:100%;justify-content:center}.time-mode-selector span{display:none}.time-mode-button{flex:1}}
+    @media (max-width:880px){.time-mode-selector{position:sticky;top:0;width:100%;justify-content:center;background:rgba(8,14,17,.94);backdrop-filter:blur(12px)}}
+    @media (max-width:560px){.time-mode-selector span{display:none}.time-mode-button{flex:1;min-width:0}}
   `;
   document.head.appendChild(style);
 
@@ -36,11 +37,14 @@
   if (eyebrow) eyebrow.textContent = 'GETAWAY / DAY & NIGHT PURSUIT';
 
   const grid = document.getElementById('environmentGrid');
-  const selector = document.createElement('div');
-  selector.className = 'time-mode-selector';
-  selector.id = 'timeModeSelector';
-  selector.innerHTML = '<span>ILLUMINAZIONE</span><button class="time-mode-button" data-light="day" aria-pressed="false">☀ GIORNO</button><button class="time-mode-button" data-light="night" aria-pressed="false">☾ NOTTE</button>';
-  grid?.parentNode?.insertBefore(selector, grid);
+  let selector = document.getElementById('timeModeSelector');
+  if (!selector) {
+    selector = document.createElement('div');
+    selector.className = 'time-mode-selector';
+    selector.id = 'timeModeSelector';
+    selector.innerHTML = '<span>ILLUMINAZIONE</span><button class="time-mode-button" data-light="day" aria-pressed="false">☀ GIORNO</button><button class="time-mode-button" data-light="night" aria-pressed="false">☾ NOTTE</button>';
+    if (grid?.parentNode) grid.parentNode.insertBefore(selector, grid);
+  }
 
   function applyPalette(env) {
     if (!env) return;
@@ -88,10 +92,7 @@
   });
 
   [ui.start, ui.retry].forEach(button => button?.addEventListener('click', () => {
-    queueMicrotask(() => {
-      applyPalettes();
-      syncUI();
-    });
+    queueMicrotask(() => { applyPalettes(); syncUI(); });
   }));
 
   const baseNightMask = drawNightMask;
@@ -117,20 +118,14 @@
 
   function polygon(points, fill, stroke, width=1) {
     if (!points.length) return;
-    ctx.beginPath();
-    ctx.moveTo(points[0].x, points[0].y);
+    ctx.beginPath();ctx.moveTo(points[0].x, points[0].y);
     for (let i=1;i<points.length;i++) ctx.lineTo(points[i].x, points[i].y);
-    ctx.closePath();
-    ctx.fillStyle = fill;
-    ctx.fill();
+    ctx.closePath();ctx.fillStyle = fill;ctx.fill();
     if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = width; ctx.stroke(); }
   }
 
   function blockPoints(b) {
-    return [
-      worldToScreen(b.left,b.top), worldToScreen(b.right,b.top),
-      worldToScreen(b.right,b.bottom), worldToScreen(b.left,b.bottom),
-    ];
+    return [worldToScreen(b.left,b.top), worldToScreen(b.right,b.top), worldToScreen(b.right,b.bottom), worldToScreen(b.left,b.bottom)];
   }
 
   function drawDayCity(g) {
@@ -139,7 +134,6 @@
       const pts = blockPoints(b);
       const fill = b.type === 'park' ? '#8dab78' : b.type === 'parking' ? '#aeb6b7' : '#d2d0c7';
       polygon(pts, fill, 'rgba(77,88,88,.38)', 2);
-
       if (b.type === 'park') {
         for (let i=0;i<6;i++) {
           const x=lerp(b.left+35,b.right-35,hash(b.seed*29+i));
@@ -169,11 +163,7 @@
       ctx.strokeStyle='rgba(57,67,71,.48)';ctx.lineWidth=2;
       ctx.fillRect(-bw/2,-bh/2,bw,bh);ctx.strokeRect(-bw/2,-bh/2,bw,bh);
       ctx.fillStyle='rgba(68,89,99,.60)';
-      for(let wy=-bh/2+12;wy<bh/2-8;wy+=16){
-        for(let wx=-bw/2+9;wx<bw/2-6;wx+=14){
-          if(hash(p.seed+wx*3+wy*5)>.52) ctx.fillRect(wx,wy,5,7);
-        }
-      }
+      for(let wy=-bh/2+12;wy<bh/2-8;wy+=16){for(let wx=-bw/2+9;wx<bw/2-6;wx+=14){if(hash(p.seed+wx*3+wy*5)>.52) ctx.fillRect(wx,wy,5,7);}}
       ctx.restore();
     }
   }
@@ -187,11 +177,8 @@
   renderMenuBackdrop = function() {
     if (lightingMode === 'night') return baseBackdrop();
     const env = ENVIRONMENTS[selectedEnv];
-    ctx.fillStyle = env.ground;
-    ctx.fillRect(0,0,W,H);
-    ctx.save();
-    ctx.translate(W*.5,H*.54);
-    ctx.rotate(-.10);
+    ctx.fillStyle = env.ground;ctx.fillRect(0,0,W,H);
+    ctx.save();ctx.translate(W*.5,H*.54);ctx.rotate(-.10);
     for(let i=-4;i<=4;i++){
       const x=i*195;
       ctx.strokeStyle='#c9c7bf';ctx.lineWidth=122;ctx.beginPath();ctx.moveTo(x,-H);ctx.lineTo(x,H);ctx.stroke();
@@ -204,5 +191,5 @@
     ctx.fillStyle=glow;ctx.fillRect(0,0,W,H);
   };
 
-  setLighting(lightingMode, false);
+  setLighting('day', false);
 })();
