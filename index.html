@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#05070b" />
+  <meta name="description" content="Night Heist Escape — inseguimento notturno 2D top-down, pronto per GitHub Pages." />
+  <title>Night Heist Escape</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <canvas id="game" aria-label="Night Heist Escape"></canvas>
+
+  <div id="vignette" aria-hidden="true"></div>
+  <div id="scanlines" aria-hidden="true"></div>
+
+  <main id="menu" class="panel panel--menu">
+    <div class="eyebrow">GETAWAY / NIGHT PURSUIT</div>
+    <h1>NIGHT <span>HEIST</span> ESCAPE</h1>
+    <p class="subtitle">Il bottino è nel bagagliaio. Le pattuglie sono dietro di te. Di notte, la strada esiste soltanto dentro il cono dei fari.</p>
+
+    <section class="environment-grid" id="environmentGrid" aria-label="Seleziona ambiente"></section>
+
+    <div class="menu-row">
+      <div class="controls-card">
+        <div class="controls-title">CONTROLLI</div>
+        <div class="controls-grid">
+          <span><kbd>W</kbd>/<kbd>↑</kbd> accelera</span>
+          <span><kbd>S</kbd>/<kbd>↓</kbd> frena / retro</span>
+          <span><kbd>A</kbd><kbd>D</kbd> sterza</span>
+          <span><kbd>SPAZIO</kbd> freno a mano</span>
+        </div>
+      </div>
+      <button id="startButton" class="primary-button">AVVIA LA FUGA <span>↗</span></button>
+    </div>
+
+    <div class="menu-footer">
+      <span>Procedurale</span><i></i><span>Nessuna dipendenza</span><i></i><span>GitHub Pages ready</span>
+    </div>
+  </main>
+
+  <section id="hud" class="hud hidden" aria-live="polite">
+    <div class="hud-top-left">
+      <div class="metric metric--speed"><span class="metric-label">KM/H</span><strong id="speedValue">0</strong></div>
+      <div class="metric"><span class="metric-label">BOTTINO</span><strong>€2.4M</strong></div>
+      <div class="metric"><span class="metric-label">DISTANZA</span><strong id="distanceValue">0.0 km</strong></div>
+    </div>
+
+    <div class="hud-center">
+      <div class="objective-label">SEMINA LE PATTUGLIE</div>
+      <div class="progress-track"><div id="escapeProgress" class="progress-fill"></div></div>
+      <div id="objectiveText" class="objective-text">0 / 8.0 km</div>
+    </div>
+
+    <div class="hud-top-right">
+      <div class="heat-label"><span>RICERCA</span><span id="heatText">★★★☆☆</span></div>
+      <div class="heat-track"><div id="heatBar" class="heat-fill"></div></div>
+      <div id="copDistance" class="cop-distance">PATTUGLIA: 120 m</div>
+    </div>
+
+    <div id="junctionHint" class="junction-hint hidden">
+      <span class="junction-kicker">BIVIO IN ARRIVO</span>
+      <strong id="junctionText">Scegli una traiettoria</strong>
+    </div>
+
+    <div class="hud-bottom-left">
+      <div class="mini-legend"><span class="dot dot--you"></span> TU</div>
+      <div class="mini-legend"><span class="dot dot--cop"></span> POLIZIA</div>
+      <div class="mini-legend"><span class="dot dot--traffic"></span> TRAFFICO</div>
+    </div>
+
+    <button id="pauseButton" class="icon-button" aria-label="Pausa">Ⅱ</button>
+  </section>
+
+  <section id="pausePanel" class="panel panel--compact hidden">
+    <div class="eyebrow">PAUSA</div>
+    <h2>Motore al minimo.</h2>
+    <p>Premi <kbd>P</kbd> o continua.</p>
+    <button id="resumeButton" class="primary-button">CONTINUA</button>
+  </section>
+
+  <section id="resultPanel" class="panel panel--compact hidden">
+    <div id="resultEyebrow" class="eyebrow">FINE CORSA</div>
+    <h2 id="resultTitle">BLOCCATO.</h2>
+    <p id="resultCopy">Le pattuglie ti hanno raggiunto.</p>
+    <div class="result-stats">
+      <div><span>DISTANZA</span><strong id="resultDistance">0.0 km</strong></div>
+      <div><span>VELOCITÀ MAX</span><strong id="resultSpeed">0 km/h</strong></div>
+      <div><span>SORPASSI</span><strong id="resultOvertakes">0</strong></div>
+    </div>
+    <div class="result-actions">
+      <button id="retryButton" class="primary-button">RIPROVA</button>
+      <button id="menuButton" class="secondary-button">CAMBIA AMBIENTE</button>
+    </div>
+  </section>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script type="module" src="src/game.js"></script>
+</body>
+</html>
