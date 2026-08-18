@@ -1,27 +1,52 @@
 (() => {
-  const input = window.NightDriveInput = window.NightDriveInput || { steer:0 };
+  const input = window.NightDriveInput = window.NightDriveInput || {};
+  input.steer ??= 0;
+  input.reverse ??= 0;
+  input.vertical ??= 0;
+
   const joystick = document.getElementById('steeringJoystick');
   const knob = joystick?.querySelector('.joystick-knob');
   let pointerId = null;
 
-  function setSteerFromPointer(event) {
+  function shapedAxis(raw, dead=.10, exponent=1.45) {
+    const a=Math.abs(raw);
+    if(a<=dead)return 0;
+    const mag=(a-dead)/(1-dead);
+    return Math.sign(raw)*Math.pow(clamp(mag,0,1),exponent);
+  }
+
+  function setJoystickFromPointer(event) {
     if (!joystick || !knob) return;
     const rect = joystick.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
-    const max = rect.width * .39;
-    const raw = clamp((event.clientX - cx) / max, -1, 1);
-    const dead = .11;
-    const mag = Math.abs(raw) <= dead ? 0 : (Math.abs(raw) - dead) / (1 - dead);
-    input.steer = Math.sign(raw) * Math.pow(mag, 1.45);
-    knob.style.transform = `translate(calc(-50% + ${raw * max}px), -50%)`;
-    joystick.classList.toggle('is-active', Math.abs(input.steer) > .02);
+    const cy = rect.top + rect.height / 2;
+    const radius = Math.min(rect.width, rect.height) * .36;
+    let rawX = (event.clientX - cx) / radius;
+    let rawY = (event.clientY - cy) / radius;
+    const mag = Math.hypot(rawX,rawY);
+    if(mag>1){ rawX/=mag; rawY/=mag; }
+
+    input.steer = shapedAxis(rawX,.11,1.48);
+    input.vertical = rawY;
+    const reverseRaw = clamp((rawY-.28)/.72,0,1);
+    input.reverse = Math.pow(reverseRaw,1.12);
+
+    knob.style.transform = `translate(calc(-50% + ${rawX*radius}px), calc(-50% + ${rawY*radius}px))`;
+    joystick.classList.toggle('is-active', Math.abs(input.steer)>.02 || input.reverse>.02);
+    joystick.classList.toggle('is-reverse', input.reverse>.08);
+    joystick.setAttribute('aria-valuenow',String(Math.round(input.steer*100)));
+    joystick.setAttribute('aria-valuetext',input.reverse>.08 ? `Retromarcia ${Math.round(input.reverse*100)}%, sterzo ${Math.round(input.steer*100)}%` : `Sterzo ${Math.round(input.steer*100)}%`);
   }
 
   function resetJoystick() {
     pointerId = null;
     input.steer = 0;
+    input.reverse = 0;
+    input.vertical = 0;
     if (knob) knob.style.transform = 'translate(-50%,-50%)';
-    joystick?.classList.remove('is-active');
+    joystick?.classList.remove('is-active','is-reverse');
+    joystick?.setAttribute('aria-valuenow','0');
+    joystick?.setAttribute('aria-valuetext','Sterzo 0%');
   }
 
   if (joystick) {
@@ -30,13 +55,13 @@
       event.preventDefault();
       pointerId = event.pointerId;
       joystick.setPointerCapture?.(event.pointerId);
-      setSteerFromPointer(event);
+      setJoystickFromPointer(event);
       navigator.vibrate?.(7);
     }, { passive:false });
     joystick.addEventListener('pointermove', event => {
       if (event.pointerId !== pointerId) return;
       event.preventDefault();
-      setSteerFromPointer(event);
+      setJoystickFromPointer(event);
     }, { passive:false });
     ['pointerup','pointercancel','lostpointercapture'].forEach(type => joystick.addEventListener(type, event => {
       if (pointerId !== null && event.pointerId !== pointerId) return;
@@ -52,7 +77,9 @@
     const p = this.player;
     const up = keys.has('ArrowUp') || keys.has('KeyW');
     const brake = keys.has('ArrowDown') || keys.has('KeyS');
-    const reverse = keys.has('KeyZ');
+    const keyReverse = keys.has('KeyZ');
+    const reversePower = keyReverse ? 1 : clamp(input.reverse || 0,0,1);
+    const reverse = reversePower > .06;
     const left = keys.has('ArrowLeft') || keys.has('KeyA');
     const right = keys.has('ArrowRight') || keys.has('KeyD');
     const hand = keys.has('Space');
@@ -68,12 +95,15 @@
     const max = onRoad ? 184 : (this.env.offroadMax || 96);
 
     if (reverse) {
-      if (p.speed > 0) p.speed = Math.max(0, p.speed - 185 * dt);
-      else p.speed -= 88 * dt;
+      if (p.speed > 1.5) {
+        p.speed = Math.max(0, p.speed - lerp(125,205,reversePower) * dt);
+      } else {
+        p.speed -= lerp(42,92,reversePower) * dt;
+      }
     } else {
       if (up) p.speed += accel * dt;
       else if (p.speed > 0) p.speed = Math.max(0, p.speed - 24 * dt);
-      else if (p.speed < 0) p.speed = Math.min(0, p.speed + 28 * dt);
+      else if (p.speed < 0) p.speed = Math.min(0, p.speed + 30 * dt);
 
       if (brake) {
         if (p.speed > 0) p.speed = Math.max(0, p.speed - 145 * dt);
@@ -82,7 +112,8 @@
     }
 
     if (hand) p.speed *= Math.pow(.82, dt * 8);
-    p.speed = clamp(p.speed, -52, max);
+    const reverseLimit = -lerp(22,52,reversePower);
+    p.speed = clamp(p.speed, reverse ? reverseLimit : -20, max);
 
     const steerStrength = (1.30 - clamp(Math.abs(p.speed) / 245, 0, .46)) * (hand ? 1.36 : 1);
     const steerResponse = 1 - Math.pow(.07, dt);
