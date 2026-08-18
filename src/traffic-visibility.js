@@ -7,7 +7,7 @@
     for (const t of g.traffic) {
       const dx = t.x - px, dy = t.y - py;
       const distance = Math.hypot(dx, dy);
-      if (distance > 520) continue;
+      if (distance > 560) continue;
       if (dx * fx + dy * fy < -90) continue;
 
       const s = worldToScreen(t.x, t.y);
@@ -16,33 +16,30 @@
 
       ctx.save();
       ctx.translate(s.x, s.y);
-      ctx.rotate(t.angle + Math.PI / 2);
+      const rotation = window.viewVehicleScreenAngle ? window.viewVehicleScreenAngle(t.angle) : t.angle + Math.PI / 2;
+      ctx.rotate(rotation);
 
-      // Reflective outline that remains visible after the night mask.
-      ctx.strokeStyle = stopped ? 'rgba(255,105,118,.88)' : 'rgba(210,225,234,.62)';
-      ctx.lineWidth = stopped ? 2.4 : 1.6;
-      ctx.shadowBlur = stopped ? 18 : 9;
+      ctx.strokeStyle = stopped ? 'rgba(255,105,118,.92)' : 'rgba(220,235,242,.70)';
+      ctx.lineWidth = stopped ? 2.6 : 1.8;
+      ctx.shadowBlur = stopped ? 20 : 10;
       ctx.shadowColor = stopped ? '#ff4057' : '#c9e7f2';
       roundRect(ctx, -t.width / 2 - 3, -t.length / 2 - 3, t.width + 6, t.length + 6, 8);
       ctx.stroke();
 
-      // Rear lamps: much brighter when a car is stopped at a red light.
       const lampY = t.length * .5 + 1;
       ctx.fillStyle = stopped ? '#ff2d45' : '#ff5a66';
-      ctx.shadowBlur = stopped ? 24 : 14;
+      ctx.shadowBlur = stopped ? 26 : 15;
       ctx.shadowColor = '#ff3048';
       ctx.fillRect(-t.width * .34, lampY - 3, 7, 4);
       ctx.fillRect(t.width * .34 - 7, lampY - 3, 7, 4);
 
       if (stopped) {
-        ctx.globalAlpha = .20;
-        const glow = ctx.createRadialGradient(0, lampY, 2, 0, lampY, 42);
+        ctx.globalAlpha = .22;
+        const glow = ctx.createRadialGradient(0, lampY, 2, 0, lampY, 44);
         glow.addColorStop(0, 'rgba(255,50,70,.95)');
         glow.addColorStop(1, 'rgba(255,50,70,0)');
         ctx.fillStyle = glow;
-        ctx.beginPath();
-        ctx.arc(0, lampY, 42, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.beginPath();ctx.arc(0, lampY, 44, 0, Math.PI * 2);ctx.fill();
       }
       ctx.restore();
     }
