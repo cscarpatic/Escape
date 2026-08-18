@@ -8,11 +8,11 @@
     if (!joystick || !knob) return;
     const rect = joystick.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
-    const max = rect.width * .31;
+    const max = rect.width * .39;
     const raw = clamp((event.clientX - cx) / max, -1, 1);
-    const dead = .08;
+    const dead = .11;
     const mag = Math.abs(raw) <= dead ? 0 : (Math.abs(raw) - dead) / (1 - dead);
-    input.steer = Math.sign(raw) * Math.pow(mag, 1.28);
+    input.steer = Math.sign(raw) * Math.pow(mag, 1.45);
     knob.style.transform = `translate(calc(-50% + ${raw * max}px), -50%)`;
     joystick.classList.toggle('is-active', Math.abs(input.steer) > .02);
   }
