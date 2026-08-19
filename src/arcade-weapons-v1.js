@@ -5,140 +5,45 @@
     .weapon-btn{width:82px;min-height:58px;border:1px solid rgba(255,255,255,.22);border-radius:14px;background:linear-gradient(180deg,rgba(18,28,36,.92),rgba(6,10,15,.92));color:#eefaff;font:800 10px/1.1 system-ui,sans-serif;letter-spacing:.08em;box-shadow:0 8px 28px rgba(0,0,0,.42),inset 0 1px rgba(255,255,255,.10);backdrop-filter:blur(10px);touch-action:manipulation}
     .weapon-btn strong{display:block;font-size:21px;margin-bottom:4px}.weapon-btn small{display:block;opacity:.65;font-size:8px;margin-top:4px}.weapon-btn.ready{box-shadow:0 0 0 1px rgba(135,238,255,.25),0 0 24px rgba(92,225,255,.13),0 8px 28px rgba(0,0,0,.42)}
     .weapon-btn.cooldown{opacity:.45;filter:saturate(.55)}
-    body:not(.night-mode) .weapon-btn{background:linear-gradient(180deg,rgba(30,42,48,.88),rgba(10,18,22,.88))}
     @media(max-width:760px){.weapon-stack{left:max(8px,env(safe-area-inset-left));bottom:max(86px,calc(env(safe-area-inset-bottom) + 72px));gap:7px}.weapon-btn{width:68px;min-height:52px;font-size:8px}.weapon-btn strong{font-size:18px}}
-  `;
-  document.head.appendChild(style);
+  `;document.head.appendChild(style);
 
-  // Keep the getaway car closer to screen center so rear-deployed gadgets remain visible.
-  worldToScreen=function(x,y,camera=game?.camera){
-    if(!camera||!game||state==='menu')return{x:W/2+x,y:H/2+y};
-    const dx=x-camera.x,dy=y-camera.y,r=window.viewRotation?window.viewRotation():0,c=Math.cos(r),s=Math.sin(r);
-    return{x:W/2+dx*c-dy*s,y:H*.525+dx*s+dy*c};
-  };
+  worldToScreen=function(x,y,camera=game?.camera){if(!camera||!game||state==='menu')return{x:W/2+x,y:H/2+y};const dx=x-camera.x,dy=y-camera.y,r=window.viewRotation?window.viewRotation():0,c=Math.cos(r),s=Math.sin(r);return{x:W/2+dx*c-dy*s,y:H*.525+dx*s+dy*c};};
 
-  const controls=document.createElement('div');controls.className='weapon-stack hidden';controls.innerHTML=`
-    <button class="weapon-btn ready" data-weapon="missile" aria-label="Spara missile"><strong>➤</strong>MISSILE<small>Q</small></button>
-    <button class="weapon-btn ready" data-weapon="spikes" aria-label="Rilascia chiodi"><strong>✦</strong>CHIODI<small>E</small></button>`;
-  document.body.appendChild(controls);
-
-  const fx={missiles:[],spikes:[],bursts:[],debris:[],flash:0};
-  const cooldown={missile:0,spikes:0};
-  const CD={missile:2.2,spikes:4.2};
-
+  const controls=document.createElement('div');controls.className='weapon-stack hidden';controls.innerHTML=`<button class="weapon-btn ready" data-weapon="missile" aria-label="Spara missile"><strong>➤</strong>MISSILE<small>Q</small></button><button class="weapon-btn ready" data-weapon="spikes" aria-label="Rilascia chiodi"><strong>✦</strong>CHIODI<small>E</small></button>`;document.body.appendChild(controls);
+  const fx={missiles:[],spikes:[],bursts:[],debris:[],flash:0},cooldown={missile:0,spikes:0},CD={missile:2.2,spikes:4.2};
+  const shake=(g,n)=>g.camera.shake=Math.max(g.camera.shake,Math.min(n,9));
   function ensureVisible(){controls.classList.toggle('hidden',state!=='playing');}
-  function fireMissile(){
-    if(!game||state!=='playing'||cooldown.missile>0)return;
-    const p=game.player,fxd=Math.cos(p.angle),fyd=Math.sin(p.angle);
-    fx.missiles.push({x:p.x+fxd*31,y:p.y+fyd*31,angle:p.angle,speed:430,life:1.65,trail:[]});
-    cooldown.missile=CD.missile;game.camera.shake=Math.max(game.camera.shake,5);fx.flash=.08;
-    audio.burst?.(160,.08,'sawtooth');navigator.vibrate?.(18);
-  }
-  function dropSpikes(){
-    if(!game||state!=='playing'||cooldown.spikes>0)return;
-    const p=game.player,fxd=Math.cos(p.angle),fyd=Math.sin(p.angle),rx=-fyd,ry=fxd;
-    for(let i=0;i<16;i++){
-      const side=(Math.random()-.5)*46,back=30+Math.random()*22;
-      fx.spikes.push({
-        x:p.x-fxd*back+rx*side,y:p.y-fyd*back+ry*side,
-        vx:-fxd*(55+Math.random()*75)+rx*(Math.random()-.5)*85,
-        vy:-fyd*(55+Math.random()*75)+ry*(Math.random()-.5)*85,
-        angle:Math.random()*Math.PI*2,spin:(Math.random()-.5)*15,
-        life:8,armed:.42+Math.random()*.18,settle:.65+Math.random()*.55,r:5+Math.random()*2
-      });
-    }
-    cooldown.spikes=CD.spikes;game.camera.shake=Math.max(game.camera.shake,3);navigator.vibrate?.([10,18,10]);
-  }
-  function trigger(kind){kind==='missile'?fireMissile():dropSpikes();}
-  controls.addEventListener('pointerdown',e=>{const b=e.target.closest('[data-weapon]');if(!b)return;e.preventDefault();trigger(b.dataset.weapon);});
-  addEventListener('keydown',e=>{if(e.repeat)return;if(e.code==='KeyQ')fireMissile();if(e.code==='KeyE')dropSpikes();});
+  function fireMissile(){if(!game||state!=='playing'||cooldown.missile>0)return;const p=game.player,fxd=Math.cos(p.angle),fyd=Math.sin(p.angle);fx.missiles.push({x:p.x+fxd*31,y:p.y+fyd*31,angle:p.angle,speed:430,life:1.65,trail:[]});cooldown.missile=CD.missile;shake(game,2.5);fx.flash=.05;audio.burst?.(160,.08,'sawtooth');navigator.vibrate?.(12);}
+  function dropSpikes(){if(!game||state!=='playing'||cooldown.spikes>0)return;const p=game.player,fxd=Math.cos(p.angle),fyd=Math.sin(p.angle),rx=-fyd,ry=fxd;for(let i=0;i<16;i++){const side=(Math.random()-.5)*46,back=30+Math.random()*22;fx.spikes.push({x:p.x-fxd*back+rx*side,y:p.y-fyd*back+ry*side,vx:-fxd*(55+Math.random()*75)+rx*(Math.random()-.5)*85,vy:-fyd*(55+Math.random()*75)+ry*(Math.random()-.5)*85,angle:Math.random()*Math.PI*2,spin:(Math.random()-.5)*15,life:8,armed:.42+Math.random()*.18,settle:.65+Math.random()*.55,r:5+Math.random()*2});}cooldown.spikes=CD.spikes;shake(game,1.5);navigator.vibrate?.([8,12,8]);}
+  controls.addEventListener('pointerdown',e=>{const b=e.target.closest('[data-weapon]');if(!b)return;e.preventDefault();b.dataset.weapon==='missile'?fireMissile():dropSpikes();});addEventListener('keydown',e=>{if(e.repeat)return;if(e.code==='KeyQ')fireMissile();if(e.code==='KeyE')dropSpikes();});
 
-  const baseUpdateCops=Game.prototype.updateCops;
-  Game.prototype.updateCops=function(dt){
-    const frozen=(this.cops||[]).filter(c=>c._weaponDisabled>0).map(c=>({c,x:c.x,y:c.y,angle:c.angle}));
-    baseUpdateCops.call(this,dt);
-    for(const f of frozen){f.c.x=f.x;f.c.y=f.y;f.c.angle=f.angle;f.c.speed=0;f.c._weaponDisabled=Math.max(0,f.c._weaponDisabled-dt);}
-  };
+  const baseUpdateCops=Game.prototype.updateCops;Game.prototype.updateCops=function(dt){const frozen=(this.cops||[]).filter(c=>c._weaponDisabled>0).map(c=>({c,x:c.x,y:c.y,angle:c.angle}));baseUpdateCops.call(this,dt);for(const f of frozen){f.c.x=f.x;f.c.y=f.y;f.c.angle=f.angle;f.c.speed=0;f.c._weaponDisabled=Math.max(0,f.c._weaponDisabled-dt);}};
+  const baseUpdate=Game.prototype.update;Game.prototype.update=function(dt){baseUpdate.call(this,dt);if(this.finished)return;cooldown.missile=Math.max(0,cooldown.missile-dt);cooldown.spikes=Math.max(0,cooldown.spikes-dt);updateWeapons(this,Math.min(dt,.033));updateButtons();ensureVisible();};
 
-  const baseUpdate=Game.prototype.update;
-  Game.prototype.update=function(dt){
-    baseUpdate.call(this,dt);
-    if(this.finished)return;
-    cooldown.missile=Math.max(0,cooldown.missile-dt);cooldown.spikes=Math.max(0,cooldown.spikes-dt);
-    updateWeapons(this,Math.min(dt,.033));updateButtons();ensureVisible();
-  };
+  function burst(g,x,y,type='impact'){const isBlast=type==='blast',isArmor=type==='armor';fx.bursts.push({x,y,life:isBlast?.7:.42,max:isBlast?.7:.42,type});shake(g,isBlast?8:isArmor?4:5);fx.flash=Math.max(fx.flash,isBlast?.18:isArmor?.08:.10);for(let i=0;i<(isBlast?34:isArmor?14:18);i++)g.spawnSparks?.(x,y,1);if(isBlast)for(let i=0;i<14;i++){const a=Math.random()*Math.PI*2,s=70+Math.random()*180;fx.debris.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,angle:Math.random()*6.28,spin:(Math.random()-.5)*12,life:.5+Math.random()*.55,size:2+Math.random()*4});}}
+  function destroyVehicle(g,car){const ci=(g.cops||[]).indexOf(car),ti=(g.traffic||[]).indexOf(car);burst(g,car.x,car.y,'blast');if(ci>=0)g.cops.splice(ci,1);else if(ti>=0)g.traffic.splice(ti,1);audio.hit?.();audio.burst?.(72,.18,'square');navigator.vibrate?.([25,15,35]);}
 
-  function burst(g,x,y,type='impact'){
-    const isBlast=type==='blast';
-    fx.bursts.push({x,y,life:isBlast?.78:.48,max:isBlast?.78:.48,type});
-    g.camera.shake=Math.max(g.camera.shake,isBlast?28:type==='impact'?18:11);fx.flash=Math.max(fx.flash,isBlast?.34:type==='impact'?.22:.12);
-    for(let i=0;i<(isBlast?48:type==='impact'?26:14);i++)g.spawnSparks?.(x,y,1);
-    if(isBlast){
-      for(let i=0;i<18;i++){const a=Math.random()*Math.PI*2,s=70+Math.random()*220;fx.debris.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,angle:Math.random()*6.28,spin:(Math.random()-.5)*14,life:.6+Math.random()*.7,size:2+Math.random()*5});}
-    }
+  function hitMissile(g,m){
+    const rb=window.NightHeistRoadblocks?.hitBarrier?.(m.x,m.y,28);if(rb){burst(g,m.x,m.y,rb.hp<=0?'blast':'armor');return true;}
+    let hit=null,best=Infinity;for(const car of [...(g.cops||[]),...(g.traffic||[])]){const d=Math.hypot(car.x-m.x,car.y-m.y);if(d<34&&d<best){hit=car;best=d;}}
+    if(!hit)return false;
+    if(hit._armoredVan){hit._missileHP=(hit._missileHP??2)-1;if(hit._missileHP>0){burst(g,hit.x,hit.y,'armor');hit.speed*=.55;audio.hit?.();return true;}}
+    destroyVehicle(g,hit);return true;
   }
-  function destroyVehicle(g,car){
-    const copIndex=(g.cops||[]).indexOf(car),trafficIndex=(g.traffic||[]).indexOf(car);
-    burst(g,car.x,car.y,'blast');
-    if(copIndex>=0)g.cops.splice(copIndex,1);
-    else if(trafficIndex>=0)g.traffic.splice(trafficIndex,1);
-    audio.hit?.();audio.burst?.(72,.22,'square');navigator.vibrate?.([45,25,70]);
-  }
+
   function updateWeapons(g,dt){
-    for(let i=fx.missiles.length-1;i>=0;i--){
-      const m=fx.missiles[i];m.life-=dt;m.trail.push({x:m.x,y:m.y,life:.22});if(m.trail.length>14)m.trail.shift();
-      m.x+=Math.cos(m.angle)*m.speed*dt;m.y+=Math.sin(m.angle)*m.speed*dt;
-      let hit=null,best=Infinity;
-      for(const car of [...(g.cops||[]),...(g.traffic||[])]){const d=Math.hypot(car.x-m.x,car.y-m.y);if(d<34&&d<best){hit=car;best=d;}}
-      if(hit){destroyVehicle(g,hit);fx.missiles.splice(i,1);continue;}
-      if(m.life<=0)fx.missiles.splice(i,1);
-    }
-
-    for(const s of fx.spikes){
-      s.life-=dt;s.armed=Math.max(0,s.armed-dt);s.settle=Math.max(0,s.settle-dt);
-      s.x+=s.vx*dt;s.y+=s.vy*dt;s.angle+=s.spin*dt;
-      const drag=s.settle>0?Math.pow(.08,dt):Math.pow(.001,dt);s.vx*=drag;s.vy*=drag;s.spin*=Math.pow(.14,dt);
-      if(s.settle<=0){s.vx*=.2;s.vy*=.2;}
-      if(s.armed<=0){
-        for(const c of g.cops||[]){if(c._spikeStamp===s)continue;if(Math.hypot(c.x-s.x,c.y-s.y)<22){c._spikeStamp=s;c._weaponDisabled=Math.max(c._weaponDisabled||0,3.6);burst(g,s.x,s.y,'spikes');s.life=.12;break;}}
-      }
-    }
-    fx.spikes=fx.spikes.filter(s=>s.life>0);
-    for(const b of fx.bursts)b.life-=dt;fx.bursts=fx.bursts.filter(b=>b.life>0);
-    for(const q of fx.debris){q.life-=dt;q.x+=q.vx*dt;q.y+=q.vy*dt;q.angle+=q.spin*dt;q.vx*=Math.pow(.04,dt);q.vy*=Math.pow(.04,dt);}
-    fx.debris=fx.debris.filter(q=>q.life>0);fx.flash=Math.max(0,fx.flash-dt);
+    for(let i=fx.missiles.length-1;i>=0;i--){const m=fx.missiles[i];m.life-=dt;m.trail.push({x:m.x,y:m.y});if(m.trail.length>14)m.trail.shift();m.x+=Math.cos(m.angle)*m.speed*dt;m.y+=Math.sin(m.angle)*m.speed*dt;if(hitMissile(g,m)){fx.missiles.splice(i,1);continue;}if(m.life<=0)fx.missiles.splice(i,1);}
+    for(const s of fx.spikes){s.life-=dt;s.armed=Math.max(0,s.armed-dt);s.settle=Math.max(0,s.settle-dt);s.x+=s.vx*dt;s.y+=s.vy*dt;s.angle+=s.spin*dt;const drag=s.settle>0?Math.pow(.08,dt):Math.pow(.001,dt);s.vx*=drag;s.vy*=drag;s.spin*=Math.pow(.14,dt);if(s.settle<=0){s.vx*=.2;s.vy*=.2;}if(s.armed<=0){for(const c of g.cops||[]){if(c._armoredVan)continue;if(c._spikeStamp===s)continue;if(Math.hypot(c.x-s.x,c.y-s.y)<22){c._spikeStamp=s;c._weaponDisabled=Math.max(c._weaponDisabled||0,3.6);burst(g,s.x,s.y,'impact');s.life=.12;break;}}}}
+    fx.spikes=fx.spikes.filter(s=>s.life>0);for(const b of fx.bursts)b.life-=dt;fx.bursts=fx.bursts.filter(b=>b.life>0);for(const q of fx.debris){q.life-=dt;q.x+=q.vx*dt;q.y+=q.vy*dt;q.angle+=q.spin*dt;q.vx*=Math.pow(.04,dt);q.vy*=Math.pow(.04,dt);}fx.debris=fx.debris.filter(q=>q.life>0);fx.flash=Math.max(0,fx.flash-dt);
   }
   function updateButtons(){for(const b of controls.querySelectorAll('[data-weapon]')){const k=b.dataset.weapon,on=cooldown[k]<=0;b.classList.toggle('ready',on);b.classList.toggle('cooldown',!on);b.querySelector('small').textContent=on?(k==='missile'?'Q':'E'):`${cooldown[k].toFixed(1)}s`;}}
-
   function screenAngle(a){return window.viewVehicleScreenAngle?window.viewVehicleScreenAngle(a):a+Math.PI/2;}
-  function drawPoliceBeacons(g){
-    const t=performance.now()*.012;
-    for(const c of g.cops||[]){
-      const s=worldToScreen(c.x,c.y);if(s.x<-120||s.x>W+120||s.y<-120||s.y>H+120)continue;
-      const a=screenAngle(c.angle),pulse=.55+.45*Math.sin(t+c.flash),swap=Math.sin(t*1.35+c.flash)>0;
-      ctx.save();ctx.translate(s.x,s.y);ctx.rotate(a);ctx.globalCompositeOperation='screen';
-      const cols=swap?['#ff2448','#2da8ff']:['#2da8ff','#ff2448'];
-      for(let i=0;i<2;i++){const x=i?7:-7;ctx.fillStyle=cols[i];ctx.shadowColor=cols[i];ctx.shadowBlur=20+12*pulse;ctx.globalAlpha=.88;ctx.fillRect(x-5,-3,10,6);ctx.globalAlpha=.16+.16*pulse;ctx.beginPath();ctx.arc(x,0,30+14*pulse,0,Math.PI*2);ctx.fill();}
-      ctx.restore();
-    }
-  }
-  function drawMissile(m){
-    for(let i=0;i<m.trail.length;i++){const q=m.trail[i],s=worldToScreen(q.x,q.y),a=(i+1)/m.trail.length;ctx.fillStyle=`rgba(255,176,68,${a*.34})`;ctx.beginPath();ctx.arc(s.x,s.y,2+5*a,0,Math.PI*2);ctx.fill();}
-    const s=worldToScreen(m.x,m.y);ctx.save();ctx.translate(s.x,s.y);ctx.rotate(screenAngle(m.angle)-Math.PI/2);ctx.globalCompositeOperation='screen';ctx.shadowBlur=18;ctx.shadowColor='#ff9b35';ctx.fillStyle='#fff3c4';ctx.beginPath();ctx.moveTo(10,0);ctx.lineTo(-8,-4);ctx.lineTo(-5,0);ctx.lineTo(-8,4);ctx.closePath();ctx.fill();ctx.restore();
-  }
-  function drawSpike(s){
-    const p=worldToScreen(s.x,s.y);ctx.save();ctx.translate(p.x,p.y);ctx.rotate(s.angle+(window.viewRotation?window.viewRotation():0));ctx.globalCompositeOperation='screen';
-    ctx.strokeStyle='rgba(220,235,240,.95)';ctx.lineWidth=1.6;ctx.shadowBlur=5;ctx.shadowColor='rgba(160,225,255,.8)';
-    ctx.beginPath();ctx.moveTo(-s.r,0);ctx.lineTo(s.r,0);ctx.moveTo(0,-s.r);ctx.lineTo(0,s.r);ctx.moveTo(-s.r*.75,-s.r*.75);ctx.lineTo(s.r*.75,s.r*.75);ctx.moveTo(s.r*.75,-s.r*.75);ctx.lineTo(-s.r*.75,s.r*.75);ctx.stroke();
-    ctx.fillStyle='rgba(60,72,82,.95)';ctx.beginPath();ctx.arc(0,0,1.7,0,Math.PI*2);ctx.fill();ctx.restore();
-  }
-  function drawBursts(){for(const b of fx.bursts){const p=worldToScreen(b.x,b.y),k=1-b.life/b.max,r=18+k*(b.type==='blast'?145:b.type==='impact'?100:65);ctx.save();ctx.globalCompositeOperation='screen';
-    if(b.type==='blast'){const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,r*.7);g.addColorStop(0,`rgba(255,250,210,${(1-k)*.95})`);g.addColorStop(.22,`rgba(255,168,48,${(1-k)*.85})`);g.addColorStop(.55,`rgba(255,62,20,${(1-k)*.45})`);g.addColorStop(1,'rgba(255,40,0,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(p.x,p.y,r*.7,0,Math.PI*2);ctx.fill();}
-    ctx.lineWidth=6*(1-k)+1;ctx.strokeStyle=`rgba(255,190,70,${(1-k)*.8})`;ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.stroke();ctx.strokeStyle=`rgba(92,225,255,${(1-k)*.35})`;ctx.beginPath();ctx.arc(p.x,p.y,r*.72,0,Math.PI*2);ctx.stroke();ctx.restore();}}
+  function drawPoliceBeacons(g){const t=performance.now()*.012;for(const c of g.cops||[]){const s=worldToScreen(c.x,c.y);if(s.x<-120||s.x>W+120||s.y<-120||s.y>H+120)continue;const a=screenAngle(c.angle),pulse=.55+.45*Math.sin(t+c.flash),swap=Math.sin(t*1.35+c.flash)>0;ctx.save();ctx.translate(s.x,s.y);ctx.rotate(a);ctx.globalCompositeOperation='screen';const cols=swap?['#ff2448','#2da8ff']:['#2da8ff','#ff2448'];for(let i=0;i<2;i++){const x=i?7:-7;ctx.fillStyle=cols[i];ctx.shadowColor=cols[i];ctx.shadowBlur=18+9*pulse;ctx.globalAlpha=.88;ctx.fillRect(x-5,-3,10,6);ctx.globalAlpha=.14+.14*pulse;ctx.beginPath();ctx.arc(x,0,28+12*pulse,0,Math.PI*2);ctx.fill();}ctx.restore();}}
+  function drawMissile(m){for(let i=0;i<m.trail.length;i++){const q=m.trail[i],s=worldToScreen(q.x,q.y),a=(i+1)/m.trail.length;ctx.fillStyle=`rgba(255,176,68,${a*.34})`;ctx.beginPath();ctx.arc(s.x,s.y,2+5*a,0,Math.PI*2);ctx.fill();}const s=worldToScreen(m.x,m.y);ctx.save();ctx.translate(s.x,s.y);ctx.rotate(screenAngle(m.angle)-Math.PI/2);ctx.globalCompositeOperation='screen';ctx.shadowBlur=18;ctx.shadowColor='#ff9b35';ctx.fillStyle='#fff3c4';ctx.beginPath();ctx.moveTo(10,0);ctx.lineTo(-8,-4);ctx.lineTo(-5,0);ctx.lineTo(-8,4);ctx.closePath();ctx.fill();ctx.restore();}
+  function drawSpike(s){const p=worldToScreen(s.x,s.y);ctx.save();ctx.translate(p.x,p.y);ctx.rotate(s.angle+(window.viewRotation?window.viewRotation():0));ctx.globalCompositeOperation='screen';ctx.strokeStyle='rgba(220,235,240,.95)';ctx.lineWidth=1.6;ctx.shadowBlur=5;ctx.shadowColor='rgba(160,225,255,.8)';ctx.beginPath();ctx.moveTo(-s.r,0);ctx.lineTo(s.r,0);ctx.moveTo(0,-s.r);ctx.lineTo(0,s.r);ctx.moveTo(-s.r*.75,-s.r*.75);ctx.lineTo(s.r*.75,s.r*.75);ctx.moveTo(s.r*.75,-s.r*.75);ctx.lineTo(-s.r*.75,s.r*.75);ctx.stroke();ctx.restore();}
+  function drawBursts(){for(const b of fx.bursts){const p=worldToScreen(b.x,b.y),k=1-b.life/b.max,r=16+k*(b.type==='blast'?120:60);ctx.save();ctx.globalCompositeOperation='screen';if(b.type==='blast'){const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,r*.7);g.addColorStop(0,`rgba(255,250,210,${(1-k)*.9})`);g.addColorStop(.3,`rgba(255,150,42,${(1-k)*.75})`);g.addColorStop(1,'rgba(255,40,0,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(p.x,p.y,r*.7,0,Math.PI*2);ctx.fill();}ctx.lineWidth=5*(1-k)+1;ctx.strokeStyle=`rgba(255,190,70,${(1-k)*.75})`;ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.stroke();ctx.restore();}}
   function drawDebris(){for(const q of fx.debris){const p=worldToScreen(q.x,q.y);ctx.save();ctx.translate(p.x,p.y);ctx.rotate(q.angle);ctx.globalAlpha=Math.min(1,q.life*1.8);ctx.fillStyle='#c7d0d6';ctx.fillRect(-q.size*.8,-q.size*.3,q.size*1.6,q.size*.6);ctx.restore();}}
-  function drawFX(g){drawPoliceBeacons(g);for(const s of fx.spikes)drawSpike(s);for(const m of fx.missiles)drawMissile(m);drawDebris();drawBursts();if(fx.flash>0){ctx.save();ctx.globalCompositeOperation='screen';ctx.fillStyle=`rgba(255,220,160,${fx.flash*.55})`;ctx.fillRect(0,0,W,H);ctx.restore();}}
-
-  const baseRender=render;
-  render=function(){baseRender();if(game&&state!=='menu')drawFX(game);ensureVisible();};
-  const baseShowMenu=showMenu;showMenu=function(){controls.classList.add('hidden');fx.missiles.length=fx.spikes.length=fx.bursts.length=fx.debris.length=0;baseShowMenu();};
+  function drawFX(g){drawPoliceBeacons(g);for(const s of fx.spikes)drawSpike(s);for(const m of fx.missiles)drawMissile(m);drawDebris();drawBursts();if(fx.flash>0){ctx.save();ctx.globalCompositeOperation='screen';ctx.fillStyle=`rgba(255,220,160,${fx.flash*.45})`;ctx.fillRect(0,0,W,H);ctx.restore();}}
+  const baseRender=render;render=function(){baseRender();if(game&&state!=='menu')drawFX(game);ensureVisible();};const baseShowMenu=showMenu;showMenu=function(){controls.classList.add('hidden');fx.missiles.length=fx.spikes.length=fx.bursts.length=fx.debris.length=0;baseShowMenu();};
 })();
