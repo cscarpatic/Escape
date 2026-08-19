@@ -1,0 +1,43 @@
+/* Touch layout v2: brake + drift on the left, handbrake centered, joystick on the right. */
+body.touch-device .touch-zone--pedals{
+  display:flex;
+  align-items:flex-end;
+  gap:14px;
+  left:max(18px,calc(env(safe-area-inset-left) + 10px))!important;
+  right:auto!important;
+  bottom:max(22px,env(safe-area-inset-bottom));
+}
+body.touch-device .touch-zone--pedals .touch-control--drift{
+  pointer-events:auto;
+  width:108px;
+  height:108px;
+  border-radius:28px;
+  font-size:13px;
+  font-weight:900;
+  letter-spacing:.12em;
+  border-color:rgba(102,247,255,.36);
+  box-shadow:inset 0 0 26px rgba(102,247,255,.06),0 14px 35px rgba(0,0,0,.28);
+}
+body.touch-device .touch-zone--pedals .touch-control--drift.is-pressed{
+  border-color:rgba(102,247,255,.82);
+  box-shadow:inset 0 0 34px rgba(102,247,255,.20),0 0 28px rgba(102,247,255,.20);
+}
+body.touch-device .touch-zone--center{
+  left:50%;
+  transform:translateX(-50%);
+  justify-content:center;
+}
+body.touch-device .touch-zone--center .touch-control--handbrake{
+  width:108px;
+  height:60px;
+}
+@media (orientation:landscape) and (max-height:520px){
+  body.touch-device .touch-zone--pedals{gap:10px;left:max(12px,calc(env(safe-area-inset-left) + 6px))!important;bottom:max(10px,env(safe-area-inset-bottom));}
+  body.touch-device .touch-zone--pedals .touch-control--drift{width:90px;height:92px;border-radius:24px;font-size:11px;}
+  body.touch-device .touch-zone--center .touch-control--handbrake{width:96px;height:54px;}
+}
+@media (orientation:portrait) and (hover:none),(orientation:portrait) and (pointer:coarse){
+  body.touch-device .touch-zone--pedals{gap:8px;left:max(12px,calc(env(safe-area-inset-left) + 6px))!important;}
+  body.touch-device .touch-zone--pedals .touch-control--drift{width:90px;height:94px;border-radius:24px;font-size:11px;}
+  body.touch-device .touch-zone--center .touch-control--handbrake{width:88px;height:54px;}
+}
