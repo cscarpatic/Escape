@@ -1,15 +1,15 @@
 (() => {
   const input = window.NightDriveInput = window.NightDriveInput || { steer:0, throttle:0, reverse:0 };
 
-  // Driving difficulty is intentionally identical in every environment.
-  // For now, level difficulty is defined by the number of pursuing police cars.
+  // Same handling in every level. Difficulty is the number of police cars, not steering.
+  // The player expresses intent; the assistant performs most of the lane/turn geometry.
   ENVIRONMENTS.forEach(env => Object.assign(env, {
-    steerAssist:2.55,
-    laneAssist:1.45,
-    cornerAssist:1.34,
-    followAssist:1.42,
-    manualShare:.35,
-    offroadMax:108,
+    steerAssist:3.20,
+    laneAssist:1.72,
+    cornerAssist:1.62,
+    followAssist:1.86,
+    manualShare:.20,
+    offroadMax:118,
   }));
 
   function pathMap(road) {
@@ -92,6 +92,15 @@
     return {nodeId,node,distance:Math.hypot(g.player.x-node.x,g.player.y-node.y)};
   }
 
+  function allowedAtCurrentLevel(g,path) {
+    const level=g.player?._roadLevel||0;
+    if(path.feature==='elevated-ramp') {
+      if(level===0) return path.rampDirection==='up';
+      return path.rampDirection==='down';
+    }
+    return (path.level||0)===level;
+  }
+
   function outgoingCandidates(g,current,nodeId) {
     const node=g.road.nodeMap?.get(nodeId);
     if (!node?.edges?.length) return [];
@@ -100,10 +109,11 @@
     for (const id of node.edges) {
       const path=byId.get(id);
       if (!path || path===current || path.id===current?.id || path.kind==='service') continue;
+      if (!allowedAtCurrentLevel(g,path)) continue;
       const d=directionFromNode(path,nodeId);
       if (!d) continue;
       const rel=angleWrap(d.angle-g.player.angle);
-      if (Math.abs(rel)>2.45) continue;
+      if (Math.abs(rel)>2.50) continue;
       out.push({path,nodeId,dir:d.dir,rel});
     }
     return out;
@@ -112,16 +122,21 @@
   function chooseOutgoing(g,current,nodeId,intent) {
     const candidates=outgoingCandidates(g,current,nodeId);
     if(!candidates.length)return null;
-    const straight=[...candidates].sort((a,b)=>Math.abs(a.rel)-Math.abs(b.rel))[0];
+
+    // Do not enter a flyover automatically when the ground road continues normally.
+    const normal=candidates.filter(c=>c.path.feature!=='elevated-ramp');
+    const straightPool=normal.length?normal:candidates;
+    const straight=[...straightPool].sort((a,b)=>Math.abs(a.rel)-Math.abs(b.rel))[0];
     if(!intent)return {...straight,matchedIntent:false,automatic:true};
 
-    const side=candidates.filter(c=>Math.sign(c.rel)===intent.dir && Math.abs(c.rel)>.28);
+    const side=candidates.filter(c=>Math.sign(c.rel)===intent.dir && Math.abs(c.rel)>.20);
     if(side.length){
-      const desired=lerp(.48,1.42,clamp(intent.strength,0,1));
+      const desired=lerp(.38,1.38,clamp(intent.strength,0,1));
       side.sort((a,b)=>Math.abs(Math.abs(a.rel)-desired)-Math.abs(Math.abs(b.rel)-desired));
       return {...side[0],matchedIntent:true,automatic:false,intentDir:intent.dir};
     }
 
+    // Asked for a road that is not there: keep the safest continuation.
     return {...straight,matchedIntent:false,automatic:true,blockedIntent:true,intentDir:intent.dir};
   }
 
@@ -142,12 +157,12 @@
       if (travelled>already) this.distance+=travelled-already;
     }
 
-    if (p._drift?.active || keys.has('Space') || p.speed<14 || (input.reverse||0)>.05) return;
+    if (p._drift?.active || keys.has('Space') || p.speed<10 || (input.reverse||0)>.05) return;
 
     const keyboard=(keys.has('ArrowRight')||keys.has('KeyD')?1:0)-
                    (keys.has('ArrowLeft')||keys.has('KeyA')?1:0);
     const rawTouch=input.steer||0;
-    const touch=Math.sign(rawTouch)*Math.pow(Math.abs(rawTouch),1.10);
+    const touch=Math.sign(rawTouch)*Math.pow(Math.abs(rawTouch),1.16);
     const steer=keyboard||touch;
     const manual=Math.abs(steer);
     const now=performance.now();
@@ -155,20 +170,21 @@
     let info=this.road.nearestInfo(p.x,p.y);
     if (!info?.path) return;
     const width=info.path.width||this.env.roadWidth;
-    if (info.d>width*.98) return;
+    if (info.d>width*1.04) return;
 
     p._roadAssist ||= {route:null,intent:null};
     const assist=p._roadAssist;
 
-    if(manual>.085){
-      assist.intent={dir:Math.sign(steer),strength:clamp(manual,0,1),expires:now+1800};
+    // A small nudge is enough: remember the requested direction for the next junction.
+    if(manual>.060){
+      assist.intent={dir:Math.sign(steer),strength:clamp(manual,0,1),expires:now+2200};
     } else if(assist.intent && now>assist.intent.expires){
       assist.intent=null;
     }
 
     const dir=travelDirection(info,p.angle);
     const upcoming=upcomingNode(this,info,dir);
-    const trigger=Math.max(235,width*1.35,Math.abs(p.speed)*1.35);
+    const trigger=Math.max(300,width*1.55,Math.abs(p.speed)*1.72);
     const activeIntent=assist.intent && now<assist.intent.expires ? assist.intent : null;
 
     if (upcoming && upcoming.distance<trigger) {
@@ -179,7 +195,7 @@
       if(shouldRechoose){
         const chosen=chooseOutgoing(this,info.path,upcoming.nodeId,activeIntent);
         if(chosen){
-          assist.route={...chosen,expires:now+3000};
+          assist.route={...chosen,expires:now+3600};
           if(chosen.matchedIntent) assist.intent=null;
         }
       }
@@ -189,23 +205,24 @@
       const routeInfo=nearestOnPath(assist.route.path,p.x,p.y);
       const node=this.road.nodeMap?.get(assist.route.nodeId);
       const nodeDistance=node?Math.hypot(p.x-node.x,p.y-node.y):Infinity;
-      const onChosen=routeInfo && routeInfo.d<(assist.route.path.width||width)*.58;
+      const routeWidth=assist.route.path.width||width;
+      const onChosen=routeInfo && routeInfo.d<routeWidth*.66;
 
-      if (onChosen && nodeDistance>92) {
+      if (onChosen && nodeDistance>105) {
         info=routeInfo;
-        assist.route=null;
-      } else if (now>assist.route.expires && nodeDistance>trigger*1.1) {
+        if(routeInfo.d<routeWidth*.24 && nodeDistance>155) assist.route=null;
+      } else if (now>assist.route.expires && nodeDistance>trigger*1.15) {
         assist.route=null;
       }
     }
 
-    const laneAssist=this.env.laneAssist||.7;
-    const followAssist=this.env.followAssist||.8;
-    const manualShare=clamp(this.env.manualShare??.35,.2,.75);
+    const laneAssist=this.env.laneAssist||1.7;
+    const followAssist=this.env.followAssist||1.8;
+    const manualShare=clamp(this.env.manualShare??.20,.12,.55);
     const autoShare=1-manualShare;
     const currentDir=travelDirection(info,p.angle);
-    const speedFactor=clamp(Math.abs(p.speed)/150,0,1);
-    const lookAhead=lerp(90,215,speedFactor);
+    const speedFactor=clamp(Math.abs(p.speed)/155,0,1);
+    const lookAhead=lerp(112,265,speedFactor);
 
     let target=pointAhead(info.path,info,currentDir,lookAhead);
     let routeInfluence=0;
@@ -215,19 +232,20 @@
       if (node) {
         const d=Math.hypot(p.x-node.x,p.y-node.y);
         const proximity=1-clamp(d/trigger,0,1);
-        const intoTurn=lerp(24,lookAhead*.82,proximity);
+        const intoTurn=lerp(32,lookAhead*.90,proximity);
         const chosenTarget=routeTarget(assist.route,intoTurn);
         if (chosenTarget) {
-          routeInfluence=clamp(.30+proximity*.70,0,1);
-          target={x:lerp(target.x,chosenTarget.x,routeInfluence),y:lerp(target.y,chosenTarget.y,routeInfluence)};
+          routeInfluence=clamp(.24+proximity*.76,0,1);
+          const blend=routeInfluence*routeInfluence*(3-2*routeInfluence);
+          target={x:lerp(target.x,chosenTarget.x,blend),y:lerp(target.y,chosenTarget.y,blend)};
         }
       }
     }
 
     const roadDesired=Math.atan2(target.y-p.y,target.x-p.x);
     const blocked=assist.route?.blockedIntent;
-    const directManualShare=assist.route?.matchedIntent ? manualShare*.10 : blocked ? manualShare*.16 : manualShare;
-    const manualAngle=steer*.46*directManualShare;
+    const directManualShare=assist.route?.matchedIntent ? manualShare*.08 : blocked ? manualShare*.08 : manualShare;
+    const manualAngle=steer*.30*directManualShare;
     const desiredAngle=roadDesired+manualAngle;
 
     const baseAngle=Math.atan2(info.ty,info.tx);
@@ -237,20 +255,22 @@
     const crossTrack=(p.x-info.x)*nx+(p.y-info.y)*ny;
     const edgeRatio=Math.abs(crossTrack)/Math.max(1,width*.5);
 
-    const headingRate=(3.15+followAssist*4.25)*(1+autoShare*.30);
-    p.angle=angleLerp(p.angle,desiredAngle,clamp(dt*headingRate,0,.18));
+    // Most correction is heading-based (smooth), not teleport-like lateral movement.
+    const headingRate=(3.8+followAssist*4.55)*(1+autoShare*.26);
+    p.angle=angleLerp(p.angle,desiredAngle,clamp(dt*headingRate,0,.155));
 
-    const manualRelax=assist.route?.matchedIntent ? .88 : lerp(1,.78,manual);
-    const pull=clamp(dt*laneAssist*(1.55+edgeRatio*2.15)*(1+autoShare*.40)*manualRelax,0,.075);
+    const manualRelax=assist.route?.matchedIntent ? .93 : lerp(1,.86,manual);
+    const pullMax=edgeRatio>.72?.054:.038;
+    const pull=clamp(dt*laneAssist*(1.18+edgeRatio*1.72)*(1+autoShare*.26)*manualRelax,0,pullMax);
     p.x=lerp(p.x,info.x,pull);
     p.y=lerp(p.y,info.y,pull);
 
     const headingError=Math.abs(angleWrap(roadDesired-p.angle));
-    if ((routeInfluence>.18 || headingError>.38) && p.speed>70) {
-      const safe=lerp(68,114,clamp(1-headingError/1.30,0,1));
-      if (p.speed>safe) p.speed=lerp(p.speed,safe,Math.min(1,dt*(3.8+(this.env.cornerAssist||.7)*3.0)));
+    if ((routeInfluence>.12 || headingError>.30) && p.speed>62) {
+      const safe=lerp(62,108,clamp(1-headingError/1.24,0,1));
+      if (p.speed>safe) p.speed=lerp(p.speed,safe,Math.min(1,dt*(4.6+(this.env.cornerAssist||1.5)*2.8)));
     }
 
-    if (assist.route && manual<.12) p.steer=lerp(p.steer,0,Math.min(1,dt*8));
+    if (assist.route && manual<.10) p.steer=lerp(p.steer,0,Math.min(1,dt*9));
   };
 })();
