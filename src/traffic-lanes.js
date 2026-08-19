@@ -18,9 +18,9 @@
     this._laneHeading ??= travelAngle;
     this._laneHeading=angleLerp(this._laneHeading,travelAngle,clamp(dt*14,0,.32));
 
-    // Right-hand traffic: the lane lies to the right of the vehicle's travel direction.
+    // Right-hand traffic in screen/world coordinates (Y grows downward on canvas).
     const offset=laneOffsetFor(this);
-    const rx=Math.sin(this._laneHeading),ry=-Math.cos(this._laneHeading);
+    const rx=-Math.sin(this._laneHeading),ry=Math.cos(this._laneHeading);
     this.x=center.x+rx*offset;
     this.y=center.y+ry*offset;
     this.angle=this._laneHeading;
