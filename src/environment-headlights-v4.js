@@ -46,7 +46,7 @@
     }
     d.save();d.beginPath();d.moveTo(origin.x,origin.y);for(const p of edge)d.lineTo(p.x,p.y);d.closePath();d.clip();
     const beam=d.createRadialGradient(origin.x,origin.y,18,origin.x,origin.y,maxDist);
-    beam.addColorStop(0,`rgba(255,255,255,${.38*power})`);beam.addColorStop(1,'rgba(255,255,255,0)');
+    beam.addColorStop(0,`rgba(255,255,255,${.44*power})`);beam.addColorStop(1,'rgba(255,255,255,0)');
     d.fillStyle=beam;d.fillRect(origin.x-maxDist,origin.y-maxDist,maxDist*2,maxDist*2);d.restore();
   }
 
@@ -54,13 +54,13 @@
     if(window.NightHeistLighting!=='night')return baseNightMask(g);
     const d=darknessCtx,env=g.env,all=occludersFor(g);
     d.setTransform(DPR,0,0,DPR,0,0);d.clearRect(0,0,W,H);d.globalCompositeOperation='source-over';
-    d.fillStyle=`rgba(0,2,7,${clamp(.89+env.fog*.20,.88,.965)})`;d.fillRect(0,0,W,H);d.globalCompositeOperation='destination-out';
+    d.fillStyle=`rgba(0,2,7,${clamp(.87+env.fog*.17,.86,.95)})`;d.fillRect(0,0,W,H);d.globalCompositeOperation='destination-out';
 
-    const playerRange=(env.propMode==='city'?610:env.propMode==='industrial'?570:env.propMode==='alpine'?510:590)*env.visibility;
-    const playerWidth=env.propMode==='alpine'?.78:env.propMode==='industrial'?.88:.94;
+    const playerRange=(env.propMode==='city'?650:env.propMode==='industrial'?610:env.propMode==='alpine'?550:630)*env.visibility;
+    const playerWidth=env.propMode==='alpine'?.82:env.propMode==='industrial'?.92:.98;
     occludedBeam(d,g.player,playerRange,playerWidth,1,all,107);
-    for(const c of g.cops){if(Math.hypot(c.x-g.player.x,c.y-g.player.y)<1050)occludedBeam(d,c,370*env.visibility,.66,.60,all,41);}
-    for(const t of g.traffic){if(Math.hypot(t.x-g.player.x,t.y-g.player.y)<850)occludedBeam(d,t,255*env.visibility,.48,.27,all,23);}
+    for(const c of g.cops){if(Math.hypot(c.x-g.player.x,c.y-g.player.y)<1050)occludedBeam(d,c,390*env.visibility,.68,.64,all,41);}
+    for(const t of g.traffic){if(Math.hypot(t.x-g.player.x,t.y-g.player.y)<850)occludedBeam(d,t,270*env.visibility,.50,.30,all,23);}
 
     d.globalCompositeOperation='source-over';d.globalAlpha=1;ctx.drawImage(darknessCanvas,0,0,W,H);drawEmergencyGlow(g);
   };
