@@ -1,11 +1,47 @@
 (() => {
   const roadblocks=[];
-  function init(g){if(g._roadblocksReady)return;g._roadblocksReady=true;const stages=g.road?.stages||[];for(let i=3;i<stages.length;i+=5){const s=stages[i],p=s.left||s.right;if(!p?.points?.length)continue;const q=samplePath(p,.52),a=q.angle,nx=-Math.sin(a),ny=Math.cos(a);roadblocks.push({x:q.x,y:q.y,angle:a,barriers:[-32,0,32].map(o=>({x:q.x+nx*o,y:q.y+ny*o,hp:2}))});}
-    const cops=g.cops||[];for(let i=0;i<cops.length;i++)if(i%3===2){cops[i]._armoredVan=true;cops[i].width=36;cops[i].length=66;cops[i]._missileHP=2;}}
+  function init(g){
+    if(g._roadblocksReady)return;
+    g._roadblocksReady=true;
+    const stages=g.road?.stages||[];
+    for(let i=3;i<stages.length;i+=5){
+      const s=stages[i],p=s.left||s.right;if(!p?.points?.length)continue;
+      const q=samplePath(p,.52),a=q.angle,nx=-Math.sin(a),ny=Math.cos(a);
+      roadblocks.push({x:q.x,y:q.y,angle:a,barriers:[-32,0,32].map(o=>({x:q.x+nx*o,y:q.y+ny*o,hp:2,maxHp:2}))});
+    }
+    const cops=g.cops||[];
+    for(let i=0;i<cops.length;i++)if(i%3===2){cops[i]._armoredVan=true;cops[i].width=36;cops[i].length=66;cops[i]._missileHP=2;}
   }
-  const baseUpdate=Game.prototype.update;Game.prototype.update=function(dt){baseUpdate.call(this,dt);if(state==='playing')init(this);};
-  window.NightHeistRoadblocks={roadblocks,isArmored:c=>!!c?._armoredVan,hitBarrier(x,y,r=24){for(const rb of roadblocks)for(const b of rb.barriers)if(b.hp>0&&Math.hypot(b.x-x,b.y-y)<r){b.hp--;return b;}return null;}};
-  function draw(){if(!game||state==='menu')return;for(const rb of roadblocks)for(const b of rb.barriers){if(b.hp<=0)continue;const s=worldToScreen(b.x,b.y);ctx.save();ctx.translate(s.x,s.y);ctx.rotate((window.viewVehicleScreenAngle?window.viewVehicleScreenAngle(rb.angle):rb.angle+Math.PI/2)+Math.PI/2);ctx.fillStyle='#aeb4b7';ctx.strokeStyle='#e3e6e7';ctx.lineWidth=2;ctx.shadowBlur=8;ctx.shadowColor='rgba(0,0,0,.7)';ctx.fillRect(-22,-7,44,14);ctx.strokeRect(-22,-7,44,14);ctx.fillStyle='#d8d0a8';for(let x=-17;x<18;x+=12)ctx.fillRect(x,-5,6,10);ctx.restore();}
-    for(const c of game.cops||[])if(c._armoredVan){const s=worldToScreen(c.x,c.y);ctx.save();ctx.translate(s.x,s.y);ctx.rotate(window.viewVehicleScreenAngle?window.viewVehicleScreenAngle(c.angle):c.angle+Math.PI/2);ctx.strokeStyle='rgba(220,235,240,.95)';ctx.lineWidth=3;ctx.strokeRect(-c.width*.55,-c.length*.55,c.width*1.1,c.length*1.1);ctx.fillStyle='rgba(220,235,240,.8)';ctx.font='800 8px system-ui';ctx.textAlign='center';ctx.fillText('UNITÀ BLINDATA',0,4);ctx.restore();}}
+  function playerBarrierCollision(g){
+    if(g._roadblockHitCooldown>0){g._roadblockHitCooldown-=1/60;return;}
+    const p=g.player;
+    for(const rb of roadblocks)for(const b of rb.barriers){
+      if(b.hp<=0)continue;
+      const d=Math.hypot(p.x-b.x,p.y-b.y);
+      if(d<31){
+        g._roadblockHitCooldown=.45;p.speed*=-.18;g.camera.shake=Math.max(g.camera.shake,5);
+        const a=Math.atan2(p.y-b.y,p.x-b.x);p.x+=Math.cos(a)*18;p.y+=Math.sin(a)*18;
+        g.spawnSparks?.(b.x,b.y,10);audio.hit?.();return;
+      }
+    }
+  }
+  const baseUpdate=Game.prototype.update;
+  Game.prototype.update=function(dt){baseUpdate.call(this,dt);if(state==='playing'){init(this);playerBarrierCollision(this);}};
+  window.NightHeistRoadblocks={
+    roadblocks,
+    isArmored:c=>!!c?._armoredVan,
+    hitBarrier(x,y,r=24){for(const rb of roadblocks)for(const b of rb.barriers)if(b.hp>0&&Math.hypot(b.x-x,b.y-y)<r){b.hp--;return b;}return null;}
+  };
+  function draw(){
+    if(!game||state==='menu')return;
+    for(const rb of roadblocks)for(const b of rb.barriers){
+      if(b.hp<=0)continue;const s=worldToScreen(b.x,b.y);ctx.save();ctx.translate(s.x,s.y);ctx.rotate((window.viewVehicleScreenAngle?window.viewVehicleScreenAngle(rb.angle):rb.angle+Math.PI/2)+Math.PI/2);
+      ctx.fillStyle=b.hp===1?'#7f8588':'#aeb4b7';ctx.strokeStyle='#e3e6e7';ctx.lineWidth=2;ctx.shadowBlur=8;ctx.shadowColor='rgba(0,0,0,.7)';ctx.fillRect(-22,-7,44,14);ctx.strokeRect(-22,-7,44,14);ctx.fillStyle='#d8d0a8';for(let x=-17;x<18;x+=12)ctx.fillRect(x,-5,6,10);ctx.restore();
+    }
+    for(const c of game.cops||[])if(c._armoredVan){
+      const s=worldToScreen(c.x,c.y);ctx.save();ctx.translate(s.x,s.y);ctx.rotate(window.viewVehicleScreenAngle?window.viewVehicleScreenAngle(c.angle):c.angle+Math.PI/2);
+      ctx.fillStyle='rgba(24,31,38,.42)';ctx.fillRect(-c.width*.52,-c.length*.52,c.width*1.04,c.length*1.04);ctx.strokeStyle='rgba(220,235,240,.95)';ctx.lineWidth=3;ctx.strokeRect(-c.width*.55,-c.length*.55,c.width*1.1,c.length*1.1);ctx.fillStyle='rgba(220,235,240,.8)';ctx.font='800 8px system-ui';ctx.textAlign='center';ctx.fillText('UNITÀ BLINDATA',0,4);ctx.restore();
+    }
+  }
   const baseRender=render;render=function(){baseRender();draw();};
 })();
