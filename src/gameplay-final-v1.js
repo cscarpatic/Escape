@@ -3,10 +3,25 @@
   style.textContent=`
     #pauseButton{position:fixed!important;right:max(16px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));top:auto!important;width:auto!important;min-width:92px;height:46px;padding:0 16px;border-radius:14px;z-index:46;background:linear-gradient(180deg,rgba(22,31,40,.94),rgba(7,11,17,.94));border:1px solid rgba(220,242,255,.30);color:#f4fbff;font:800 11px/1 system-ui,sans-serif;letter-spacing:.10em;box-shadow:0 10px 30px rgba(0,0,0,.42),0 0 18px rgba(100,220,255,.08);backdrop-filter:blur(10px)}
     #pauseButton::after{content:'  PAUSA'}
+    .touch-control--brake,.touch-control--handbrake{display:none!important}
+    .touch-zone--center{display:none!important}
     @media(max-width:760px){#pauseButton{right:max(10px,env(safe-area-inset-right));bottom:max(10px,env(safe-area-inset-bottom));min-width:78px;height:42px;font-size:9px;padding:0 12px}}
   `;document.head.appendChild(style);
+  document.querySelector('.touch-control--brake')?.remove();
+  document.querySelector('.touch-control--handbrake')?.remove();
+
   const baseGameUpdate=Game.prototype.update;
-  Game.prototype.update=function(dt){if(this.finished)return baseGameUpdate.call(this,dt);baseGameUpdate.call(this,dt);this.camera.shake=Math.min(this.camera.shake||0,9);if(!this.finished&&this.cops&&this.cops.length===0){this.catch=0;this.end(true);if(ui.resultCopy)ui.resultCopy.textContent='Tutte le pattuglie sono state eliminate. Via libera: il bottino è salvo.';}};
+  Game.prototype.update=function(dt){
+    if(this.finished)return baseGameUpdate.call(this,dt);
+    const before=this.camera.shake||0;
+    baseGameUpdate.call(this,dt);
+    const after=Math.min(this.camera.shake||0,8);
+    if(after>before+.15)this._shakeLife=2;
+    this._shakeLife=Math.max(0,(this._shakeLife||0)-dt);
+    if(this._shakeLife<=0)this.camera.shake=0;
+    else this.camera.shake=Math.min(8,after*Math.pow(.18,dt));
+    if(!this.finished&&this.cops&&this.cops.length===0){this.catch=0;this.end(true);if(ui.resultCopy)ui.resultCopy.textContent='Tutte le pattuglie sono state eliminate. Via libera: il bottino è salvo.';}
+  };
   const basePlayerUpdate=Game.prototype.updatePlayer;
   Game.prototype.updatePlayer=function(dt){basePlayerUpdate.call(this,dt);const accelerating=keys.has('ArrowUp')||keys.has('KeyW');if(accelerating&&this.player.speed>0)this.player.speed=Math.min(228,this.player.speed+42*dt);if(this.player.speed>182)this.player.speed=Math.min(228,this.player.speed);};
   function samePoint(a,b){return Math.hypot(a.x-b.x,a.y-b.y)<3;}
