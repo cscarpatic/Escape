@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="analog.css?v=20260818-5" />
   <link rel="stylesheet" href="radar.css?v=20260818-1" />
   <link rel="stylesheet" href="experience-v2.css?v=20260819-1" />
+  <link rel="stylesheet" href="touch-layout-v2.css?v=20260819-1" />
 </head>
 <body>
   <canvas id="game" aria-label="Night Heist Escape"></canvas>
@@ -34,7 +35,7 @@
           <span><kbd>W</kbd>/<kbd>↑</kbd> accelera</span><span><kbd>S</kbd>/<kbd>↓</kbd> frena</span><span><kbd>Z</kbd> retromarcia</span><span><kbd>A</kbd><kbd>D</kbd> intenzione di svolta</span><span><kbd>SPAZIO</kbd> freno a mano</span><span><kbd>SHIFT</kbd>/<kbd>X</kbd> derapata 90°→180°</span>
         </div>
         <div class="controls-grid mobile-control-note">
-          <span>JOYSTICK A DESTRA: guida completa</span><span>↑ GAS · ↓ RETRO</span><span>←/→ scegli la strada</span><span>FRENO a sinistra · DRIFT al centro</span>
+          <span>JOYSTICK A DESTRA: guida completa</span><span>↑ GAS · ↓ RETRO</span><span>←/→ scegli la strada</span><span>FRENO + DRIFT a sinistra · FRENO A MANO al centro</span>
         </div>
       </div>
       <button id="startButton" class="primary-button">AVVIA LA FUGA <span>↗</span></button>
@@ -65,12 +66,12 @@
         <div class="joystick-knob"></div><span class="joystick-label">STERZO</span>
       </div>
     </div>
-    <div class="touch-zone touch-zone--center" aria-label="Comandi di manovra">
+    <div class="touch-zone touch-zone--center" aria-label="Freno a mano">
       <button class="touch-control touch-control--handbrake" data-code="Space" aria-label="Freno a mano" aria-pressed="false">FRENO A MANO</button>
-      <button class="touch-control touch-control--drift" data-code="ShiftLeft" aria-label="Derapata progressiva" aria-pressed="false">DRIFT</button>
     </div>
-    <div class="touch-zone touch-zone--pedals" aria-label="Freno">
+    <div class="touch-zone touch-zone--pedals" aria-label="Freno e derapata">
       <button class="touch-control touch-control--pedal touch-control--brake" data-code="ArrowDown" aria-label="Frena" aria-pressed="false"><span><strong>▼</strong>FRENO</span></button>
+      <button class="touch-control touch-control--drift" data-code="ShiftLeft" aria-label="Derapata progressiva" aria-pressed="false">DRIFT</button>
     </div>
   </section>
 
