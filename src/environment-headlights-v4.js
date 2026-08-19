@@ -34,20 +34,48 @@
     const pad=maxDist+100;return all.filter(o=>!(o.right<car.x-pad||o.left>car.x+pad||o.bottom<car.y-pad||o.top>car.y+pad));
   }
 
-  // One light surface, one continuous radial fade. Obstacles only shape the clipping polygon:
-  // they never add extra brightness layers, so the beam itself cannot form bands.
-  function occludedBeam(d,car,maxDist,halfAngle,power,all,rays){
+  function buildBeamEdge(car,maxDist,halfAngle,all,rays,soften=0){
     const fx=Math.cos(car.angle),fy=Math.sin(car.angle),nose=Math.min(23,car.length*.42);
     const ox=car.x+fx*nose,oy=car.y+fy*nose,origin=worldToScreen(ox,oy),local=nearby(car,all,maxDist),edge=[];
     for(let i=0;i<=rays;i++){
       const f=i/rays,center=Math.sin(f*Math.PI),ang=car.angle-halfAngle+f*halfAngle*2;
       const limit=maxDist*(.955+.045*Math.pow(center,.65));
-      const hit=cast(ox,oy,ang,limit,local),s=worldToScreen(ox+Math.cos(ang)*hit,oy+Math.sin(ang)*hit);edge.push(s);
+      const hit=cast(ox,oy,ang,limit,local);
+      const softened=Math.min(limit,hit+soften);
+      edge.push(worldToScreen(ox+Math.cos(ang)*softened,oy+Math.sin(ang)*softened));
     }
-    d.save();d.beginPath();d.moveTo(origin.x,origin.y);for(const p of edge)d.lineTo(p.x,p.y);d.closePath();d.clip();
-    const beam=d.createRadialGradient(origin.x,origin.y,18,origin.x,origin.y,maxDist);
-    beam.addColorStop(0,`rgba(255,255,255,${.44*power})`);beam.addColorStop(1,'rgba(255,255,255,0)');
-    d.fillStyle=beam;d.fillRect(origin.x-maxDist,origin.y-maxDist,maxDist*2,maxDist*2);d.restore();
+    return {origin,edge};
+  }
+
+  function clipBeam(d,origin,edge){
+    d.beginPath();d.moveTo(origin.x,origin.y);for(const p of edge)d.lineTo(p.x,p.y);d.closePath();d.clip();
+  }
+
+  // Multi-stop radial falloff gives a visibly stronger hotspot near the lamps,
+  // a broad usable mid-field, and a gentle fade in the far field.
+  // A second, slightly expanded low-power pass creates a soft penumbra around
+  // building edges instead of a razor-sharp shadow boundary.
+  function occludedBeam(d,car,maxDist,halfAngle,power,all,rays){
+    const hard=buildBeamEdge(car,maxDist,halfAngle,all,rays,0);
+    const soft=buildBeamEdge(car,maxDist,halfAngle*1.018,all,Math.max(19,Math.floor(rays*.72)),18);
+
+    d.save();clipBeam(d,soft.origin,soft.edge);
+    const halo=d.createRadialGradient(soft.origin.x,soft.origin.y,20,soft.origin.x,soft.origin.y,maxDist*1.03);
+    halo.addColorStop(0,`rgba(255,248,226,${.13*power})`);
+    halo.addColorStop(.34,`rgba(255,248,226,${.09*power})`);
+    halo.addColorStop(.72,`rgba(255,248,226,${.035*power})`);
+    halo.addColorStop(1,'rgba(255,248,226,0)');
+    d.fillStyle=halo;d.fillRect(soft.origin.x-maxDist,soft.origin.y-maxDist,maxDist*2,maxDist*2);d.restore();
+
+    d.save();clipBeam(d,hard.origin,hard.edge);
+    const beam=d.createRadialGradient(hard.origin.x,hard.origin.y,14,hard.origin.x,hard.origin.y,maxDist);
+    beam.addColorStop(0,`rgba(255,250,232,${.54*power})`);
+    beam.addColorStop(.12,`rgba(255,250,232,${.48*power})`);
+    beam.addColorStop(.32,`rgba(255,250,232,${.34*power})`);
+    beam.addColorStop(.56,`rgba(255,250,232,${.20*power})`);
+    beam.addColorStop(.78,`rgba(255,250,232,${.085*power})`);
+    beam.addColorStop(1,'rgba(255,250,232,0)');
+    d.fillStyle=beam;d.fillRect(hard.origin.x-maxDist,hard.origin.y-maxDist,maxDist*2,maxDist*2);d.restore();
   }
 
   drawNightMask=function(g){
