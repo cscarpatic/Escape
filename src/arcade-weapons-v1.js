@@ -12,7 +12,7 @@
 
   const controls=document.createElement('div');controls.className='weapon-stack hidden';controls.innerHTML=`
     <button class="weapon-btn ready" data-weapon="missile" aria-label="Spara missile"><strong>➤</strong>MISSILE<small>Q</small></button>
-    <button class="weapon-btn ready" data-weapon="spikes" aria-label="Rilascia chiodi"><strong>✦</strong>CHI0DI<small>E</small></button>`;
+    <button class="weapon-btn ready" data-weapon="spikes" aria-label="Rilascia chiodi"><strong>✦</strong>CHIODI<small>E</small></button>`;
   document.body.appendChild(controls);
 
   const fx={missiles:[],spikes:[],bursts:[],flash:0};
@@ -54,7 +54,7 @@
 
   function burst(g,x,y,type='impact'){
     fx.bursts.push({x,y,life:.48,max:.48,type});
-    g.camera.shake=Math.max(g.camera.shake,type==='impact'?18:11);fx.flash=Math.max(fx.flash,type==='impact'?.22:.12);
+    g.camera.shake=Math.max(g.camera.shake,type==='impact'?18:11);fx.flash=Math.max(fx.flash,type==='impact' ? .22 : .12);
     for(let i=0;i<(type==='impact'?26:14);i++)g.spawnSparks?.(x,y,1);
   }
   function updateWeapons(g,dt){
