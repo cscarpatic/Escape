@@ -1,14 +1,21 @@
 (() => {
   const style=document.createElement('style');
   style.textContent=`
-    .weapon-stack{position:fixed;left:max(14px,env(safe-area-inset-left));top:50%;transform:translateY(-50%);z-index:35;display:flex;flex-direction:column;gap:10px;pointer-events:auto}
+    .weapon-stack{position:fixed;left:max(14px,env(safe-area-inset-left));bottom:max(116px,calc(env(safe-area-inset-bottom) + 94px));z-index:35;display:flex;flex-direction:column;gap:10px;pointer-events:auto}
     .weapon-btn{width:82px;min-height:58px;border:1px solid rgba(255,255,255,.22);border-radius:14px;background:linear-gradient(180deg,rgba(18,28,36,.92),rgba(6,10,15,.92));color:#eefaff;font:800 10px/1.1 system-ui,sans-serif;letter-spacing:.08em;box-shadow:0 8px 28px rgba(0,0,0,.42),inset 0 1px rgba(255,255,255,.10);backdrop-filter:blur(10px);touch-action:manipulation}
     .weapon-btn strong{display:block;font-size:21px;margin-bottom:4px}.weapon-btn small{display:block;opacity:.65;font-size:8px;margin-top:4px}.weapon-btn.ready{box-shadow:0 0 0 1px rgba(135,238,255,.25),0 0 24px rgba(92,225,255,.13),0 8px 28px rgba(0,0,0,.42)}
     .weapon-btn.cooldown{opacity:.45;filter:saturate(.55)}
     body:not(.night-mode) .weapon-btn{background:linear-gradient(180deg,rgba(30,42,48,.88),rgba(10,18,22,.88))}
-    @media(max-width:760px){.weapon-stack{top:43%;left:max(8px,env(safe-area-inset-left))}.weapon-btn{width:68px;min-height:52px;font-size:8px}.weapon-btn strong{font-size:18px}}
+    @media(max-width:760px){.weapon-stack{left:max(8px,env(safe-area-inset-left));bottom:max(86px,calc(env(safe-area-inset-bottom) + 72px));gap:7px}.weapon-btn{width:68px;min-height:52px;font-size:8px}.weapon-btn strong{font-size:18px}}
   `;
   document.head.appendChild(style);
+
+  // Keep the getaway car closer to screen center so rear-deployed gadgets remain visible.
+  worldToScreen=function(x,y,camera=game?.camera){
+    if(!camera||!game||state==='menu')return{x:W/2+x,y:H/2+y};
+    const dx=x-camera.x,dy=y-camera.y,r=window.viewRotation?window.viewRotation():0,c=Math.cos(r),s=Math.sin(r);
+    return{x:W/2+dx*c-dy*s,y:H*.525+dx*s+dy*c};
+  };
 
   const controls=document.createElement('div');controls.className='weapon-stack hidden';controls.innerHTML=`
     <button class="weapon-btn ready" data-weapon="missile" aria-label="Spara missile"><strong>➤</strong>MISSILE<small>Q</small></button>
@@ -67,7 +74,7 @@
     g.camera.shake=Math.max(g.camera.shake,isBlast?28:type==='impact'?18:11);fx.flash=Math.max(fx.flash,isBlast?.34:type==='impact'?.22:.12);
     for(let i=0;i<(isBlast?48:type==='impact'?26:14);i++)g.spawnSparks?.(x,y,1);
     if(isBlast){
-      for(let i=0;i<18;i++){const a=Math.random()*Math.PI*2,s=70+Math.random()*220;fx.debris.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,angle:Math.random()*6.28,spin:(Math.random()-.5)*14,life:.6+Math.random*.7,size:2+Math.random()*5});}
+      for(let i=0;i<18;i++){const a=Math.random()*Math.PI*2,s=70+Math.random()*220;fx.debris.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,angle:Math.random()*6.28,spin:(Math.random()-.5)*14,life:.6+Math.random()*.7,size:2+Math.random()*5});}
     }
   }
   function destroyVehicle(g,car){
@@ -120,7 +127,7 @@
     const s=worldToScreen(m.x,m.y);ctx.save();ctx.translate(s.x,s.y);ctx.rotate(screenAngle(m.angle)-Math.PI/2);ctx.globalCompositeOperation='screen';ctx.shadowBlur=18;ctx.shadowColor='#ff9b35';ctx.fillStyle='#fff3c4';ctx.beginPath();ctx.moveTo(10,0);ctx.lineTo(-8,-4);ctx.lineTo(-5,0);ctx.lineTo(-8,4);ctx.closePath();ctx.fill();ctx.restore();
   }
   function drawSpike(s){
-    const p=worldToScreen(s.x,s.y);ctx.save();ctx.translate(p.x,p.y);ctx.rotate(s.angle+window.viewRotation?.()||s.angle);ctx.globalCompositeOperation='screen';
+    const p=worldToScreen(s.x,s.y);ctx.save();ctx.translate(p.x,p.y);ctx.rotate(s.angle+(window.viewRotation?window.viewRotation():0));ctx.globalCompositeOperation='screen';
     ctx.strokeStyle='rgba(220,235,240,.95)';ctx.lineWidth=1.6;ctx.shadowBlur=5;ctx.shadowColor='rgba(160,225,255,.8)';
     ctx.beginPath();ctx.moveTo(-s.r,0);ctx.lineTo(s.r,0);ctx.moveTo(0,-s.r);ctx.lineTo(0,s.r);ctx.moveTo(-s.r*.75,-s.r*.75);ctx.lineTo(s.r*.75,s.r*.75);ctx.moveTo(s.r*.75,-s.r*.75);ctx.lineTo(-s.r*.75,s.r*.75);ctx.stroke();
     ctx.fillStyle='rgba(60,72,82,.95)';ctx.beginPath();ctx.arc(0,0,1.7,0,Math.PI*2);ctx.fill();ctx.restore();
