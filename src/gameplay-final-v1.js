@@ -38,6 +38,11 @@
 
     if(active===0){
       this.catch=0;
+      if(pending>0 && !this._pendingClearAdjusted){
+        const elapsed=(performance.now()-this.startedAt)/1000;
+        for(const reinforcement of this._pendingCops) reinforcement.delay=Math.min(reinforcement.delay,elapsed+6.5);
+        this._pendingClearAdjusted=true;
+      }
       if(pending===0 && progress>=.50){
         this.end(true);
         if(ui.resultCopy)ui.resultCopy.textContent='Hai superato metà fuga ed eliminato tutte le pattuglie. Nessun rinforzo rimasto: via libera.';
@@ -54,6 +59,7 @@
       }
     }else{
       this._policeClearTimer=0;
+      this._pendingClearAdjusted=false;
     }
   };
 
