@@ -7,25 +7,54 @@
   `;
   document.head.appendChild(style);
 
-  // Win immediately when every pursuing police car has been destroyed.
+  function spawnEmergencyCop(g){
+    if(!g?.player)return;
+    const p=g.player,gap=Math.max(360,g.env.startGap||430);
+    const rawX=p.x-Math.cos(p.angle)*gap,rawY=p.y-Math.sin(p.angle)*gap;
+    const info=g.road?.nearestInfo?.(rawX,rawY);
+    const x=info?.x??rawX,y=info?.y??rawY;
+    const angle=Math.atan2(p.y-y,p.x-x);
+    const c=new Car(x,y,angle,'cop');
+    c.speed=Math.min(168,Math.max(92,p.speed*.78));
+    c.flash=performance.now()*.0017;
+    c._arrivalLabel='DA DIETRO';
+    c._emergencyBackup=true;
+    g.cops.push(c);
+    g.heat=clamp(Math.max(g.heat,.58),0,1);
+    if(typeof toast==='function')toast('RINFORZI IN ARRIVO · RIPARTI!');
+    audio.burst?.(360,.05,'square');
+  }
+
   const baseGameUpdate=Game.prototype.update;
   Game.prototype.update=function(dt){
     if(this.finished)return baseGameUpdate.call(this,dt);
     baseGameUpdate.call(this,dt);
-    if(!this.finished && this.cops && this.cops.length===0){
-      this.catch=0;
-      this.end(true);
-      if(ui.resultCopy)ui.resultCopy.textContent='Tutte le pattuglie sono state eliminate. Via libera: il bottino è salvo.';
-    }
-  };
+    if(this.finished)return;
 
-  // Faster getaway car while preserving the existing steering model.
-  const basePlayerUpdate=Game.prototype.updatePlayer;
-  Game.prototype.updatePlayer=function(dt){
-    basePlayerUpdate.call(this,dt);
-    const accelerating=keys.has('ArrowUp')||keys.has('KeyW');
-    if(accelerating && this.player.speed>0)this.player.speed=Math.min(228,this.player.speed+42*dt);
-    if(this.player.speed>182)this.player.speed=Math.min(228,this.player.speed);
+    const active=(this.cops||[]).length;
+    const pending=(this._pendingCops||[]).length;
+    const target=Math.max(1,(this.env.escapeKm||1)*1000);
+    const progress=clamp(this.distance/target,0,1);
+
+    if(active===0){
+      this.catch=0;
+      if(pending===0 && progress>=.50){
+        this.end(true);
+        if(ui.resultCopy)ui.resultCopy.textContent='Hai superato metà fuga ed eliminato tutte le pattuglie. Nessun rinforzo rimasto: via libera.';
+        return;
+      }
+      if(pending===0 && progress<.50){
+        this._policeClearTimer=(this._policeClearTimer||0)+Math.min(dt,.033);
+        if(this._policeClearTimer>=6.5){
+          this._policeClearTimer=0;
+          spawnEmergencyCop(this);
+        }
+      }else{
+        this._policeClearTimer=0;
+      }
+    }else{
+      this._policeClearTimer=0;
+    }
   };
 
   function samePoint(a,b){return Math.hypot(a.x-b.x,a.y-b.y)<3;}
@@ -46,7 +75,6 @@
     return best;
   }
 
-  // Replace segment teleporting with real traversal through connected roads.
   TrafficCar.prototype.update=function(dt){
     if(!this.path?.points?.length)return;
     if(!this._speedBoosted){this.baseSpeed*=1.24;this._speedBoosted=true;}
@@ -66,10 +94,12 @@
     this.x=center.x+rx*offset;this.y=center.y+ry*offset;this.angle=this._laneHeading;this.speed=this.baseSpeed*this.direction;this.laneOffset=offset;
   };
 
-  // Slightly faster police, but still below the upgraded getaway car's top speed.
   const baseCopUpdate=Game.prototype.updateCops;
   Game.prototype.updateCops=function(dt){
     baseCopUpdate.call(this,dt);
-    for(const c of this.cops||[]){if(!c._finalSpeedBoost){c._finalSpeedBoost=true;c.speed*=1.08;}if(c.speed>0)c.speed=Math.min(c.speed*1.002,208);}
+    for(const c of this.cops||[]){
+      if(!c._finalSpeedBoost){c._finalSpeedBoost=true;c.speed*=1.08;}
+      if(c.speed>0)c.speed=Math.min(c.speed*1.002,208);
+    }
   };
 })();
