@@ -2,7 +2,6 @@
   const isCoarse = matchMedia('(pointer:coarse)').matches;
   const MAX_DPR = isCoarse ? 1.35 : 1.5;
   const previousNightMask = drawNightMask;
-  const previousDrawProps = drawProps;
 
   function applyResolutionCap(){
     const target=Math.min(MAX_DPR,window.devicePixelRatio||1);
@@ -22,24 +21,26 @@
   applyResolutionCap();
 
   function rectPoly(left,top,right,bottom){return[{x:left,y:top},{x:right,y:top},{x:right,y:bottom},{x:left,y:bottom}];}
-  function cityOccluders(g){
-    const road=g.road;
-    if(!road._perfCityOccluders){
-      road._perfCityOccluders=[];
-      for(const p of road.props||[]){
-        if(p.mode!=='city')continue;
-        const h=hash(p.seed*7),bw=45+h*45,bh=70+hash(p.seed*11)*110;
-        const left=p.x-bw*.55,right=p.x+bw*.55,top=p.y-bh*.55,bottom=p.y+bh*.55;
-        road._perfCityOccluders.push({polygon:rectPoly(left,top,right,bottom),left,right,top,bottom});
-      }
+  function buildCityOccluders(road){
+    if(road._perfCityOccluders)return road._perfCityOccluders;
+    const out=[];
+    for(const p of road.props||[]){
+      if(p.mode!=='city')continue;
+      const h=hash(p.seed*7),bw=45+h*45,bh=70+hash(p.seed*11)*110;
+      const left=p.x-bw*.55,right=p.x+bw*.55,top=p.y-bh*.55,bottom=p.y+bh*.55;
+      out.push({polygon:rectPoly(left,top,right,bottom),left,right,top,bottom});
     }
-    const y=g.player.y,pad=900;
-    return road._perfCityOccluders.filter(o=>o.bottom>y-pad&&o.top<y+pad);
+    road._perfCityOccluders=out;
+    return out;
   }
   function occludersFor(g){
-    if(g.env.propMode==='city')return cityOccluders(g);
-    const y=g.player.y,pad=900;
-    return (g.road.lightOccluders||[]).filter(o=>o?.polygon?.length>=3&&o.bottom>y-pad&&o.top<y+pad);
+    const road=g.road,y=g.player.y,bucket=Math.floor(y/280);
+    if(road._perfNearLightBucket===bucket&&road._perfNearLightOccluders)return road._perfNearLightOccluders;
+    const source=g.env.propMode==='city'?buildCityOccluders(road):(road.lightOccluders||[]);
+    const pad=900,out=[];
+    for(const o of source){if(o?.polygon?.length>=3&&o.bottom>y-pad&&o.top<y+pad)out.push(o);}
+    road._perfNearLightBucket=bucket;road._perfNearLightOccluders=out;
+    return out;
   }
   function pointInPoly(x,y,poly){let inside=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[i],b=poly[j],hit=((a.y>y)!==(b.y>y))&&(x<(b.x-a.x)*(y-a.y)/((b.y-a.y)||1e-9)+a.x);if(hit)inside=!inside;}return inside;}
   function raySegment(ox,oy,dx,dy,a,b,maxDist){
@@ -93,6 +94,20 @@
     g.addColorStop(0,`rgba(255,42,62,${.72*power})`);g.addColorStop(1,'rgba(255,42,62,0)');
     ctx.save();ctx.globalCompositeOperation='screen';ctx.fillStyle=g;ctx.beginPath();ctx.arc(s.x,s.y,22,0,Math.PI*2);ctx.fill();ctx.restore();
   }
+  function nearbyCops(g,maxDist,maxCount){
+    const max2=maxDist*maxDist,out=[];
+    for(const c of g.cops||[]){const dx=c.x-g.player.x,dy=c.y-g.player.y;if(dx*dx+dy*dy<max2){out.push(c);if(out.length>=maxCount)break;}}
+    return out;
+  }
+  function nearestTraffic(g,maxDist,maxCount){
+    const max2=maxDist*maxDist,out=[];
+    for(const t of g.traffic||[]){
+      const dx=t.x-g.player.x,dy=t.y-g.player.y,d2=dx*dx+dy*dy;if(d2>=max2)continue;
+      let pos=out.length;while(pos>0&&out[pos-1].d2>d2)pos--;
+      out.splice(pos,0,{car:t,d2});if(out.length>maxCount)out.pop();
+    }
+    return out.map(x=>x.car);
+  }
 
   drawNightMask=function(g){
     if(window.NightHeistLighting!=='night')return previousNightMask(g);
@@ -105,42 +120,16 @@
     const playerRays=isCoarse?17:23;
     const playerCore=beamPolygon(g.player,playerRange,playerHalf,playerRays,all,true);
     const playerFeather=beamPolygon(g.player,playerRange*1.03,playerHalf*1.18,Math.max(9,Math.floor(playerRays*.55)),all,false);
-    paintBeam(d,playerFeather,playerRange*1.03,.20);
-    paintBeam(d,playerCore,playerRange,1);
+    paintBeam(d,playerFeather,playerRange*1.03,.20);paintBeam(d,playerCore,playerRange,1);
 
-    const cops=(g.cops||[]).filter(c=>Math.hypot(c.x-g.player.x,c.y-g.player.y)<820).slice(0,3);
-    for(const c of cops)paintBeam(d,beamPolygon(c,320*env.visibility,.34,7,all,false),320*env.visibility,.32);
+    const cops=nearbyCops(g,820,3);
+    for(const c of cops){const length=320*env.visibility;paintBeam(d,beamPolygon(c,length,.34,7,all,false),length,.32);}
 
-    const traffic=(g.traffic||[])
-      .filter(t=>Math.hypot(t.x-g.player.x,t.y-g.player.y)<620)
-      .sort((a,b)=>Math.hypot(a.x-g.player.x,a.y-g.player.y)-Math.hypot(b.x-g.player.x,b.y-g.player.y))
-      .slice(0,isCoarse?4:6);
-    for(const t of traffic)paintBeam(d,beamPolygon(t,215*env.visibility,.27,5,all,false),215*env.visibility,.16);
+    const traffic=nearestTraffic(g,620,isCoarse?4:6);
+    for(const t of traffic){const length=215*env.visibility;paintBeam(d,beamPolygon(t,length,.27,5,all,false),length,.16);}
 
     d.globalCompositeOperation='source-over';d.globalAlpha=1;ctx.drawImage(darknessCanvas,0,0,W,H);
-    drawEmergencyGlow(g);drawTailGlow(g.player,1);
-    for(const c of cops)drawTailGlow(c,.55);
-  };
-
-  // City buildings are still detailed, but window density is reduced and distant props are culled earlier.
-  drawProps=function(g){
-    if(!g||g.env.propMode!=='city')return previousDrawProps(g);
-    for(const p of g.road.props||[]){
-      if(p.mode!=='city'||Math.abs(p.y-g.player.y)>760)continue;
-      const s=worldToScreen(p.x,p.y),h=hash(p.seed*7);
-      if(s.x<-120||s.x>W+120||s.y<-140||s.y>H+140)continue;
-      const bw=45+h*45,bh=70+hash(p.seed*11)*110;
-      ctx.save();ctx.translate(s.x,s.y);
-      ctx.fillStyle=`rgba(${18+Math.floor(h*18)},${23+Math.floor(h*20)},${31+Math.floor(h*22)},.95)`;ctx.fillRect(-bw/2,-bh/2,bw,bh);
-      for(let wy=-bh/2+14;wy<bh/2-8;wy+=24){
-        for(let wx=-bw/2+10;wx<bw/2-6;wx+=20){
-          if(hash(p.seed+wx*3+wy*5)>.82){
-            ctx.fillStyle=hash(p.seed+wx)>.55?'rgba(92,225,255,.32)':'rgba(255,196,89,.30)';ctx.fillRect(wx,wy,4,6);
-          }
-        }
-      }
-      ctx.restore();
-    }
+    drawEmergencyGlow(g);drawTailGlow(g.player,1);for(const c of cops)drawTailGlow(c,.55);
   };
 
   window.NightHeistPerformance={mode:'smooth',maxDpr:MAX_DPR,playerLightRays:isCoarse?17:23};
