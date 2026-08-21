@@ -26,27 +26,29 @@
   <main id="menu" class="panel panel--menu">
     <div class="eyebrow">GETAWAY / NIGHT PURSUIT</div>
     <h1>NIGHT <span>HEIST</span> ESCAPE</h1>
-    <p class="subtitle">Il bottino è nel bagagliaio. Le pattuglie sono dietro di te. Di notte, la strada esiste soltanto dentro il cono dei fari.</p>
+    <p class="subtitle">Scappa dalla polizia, scegli la strada giusta e porta il bottino al sicuro.</p>
     <section class="environment-grid" id="environmentGrid" aria-label="Seleziona ambiente"></section>
     <div class="menu-row">
       <div class="controls-card">
-        <div class="controls-title">GUIDA RAPIDA</div>
+        <div class="controls-title">COME SI GIOCA</div>
         <div class="controls-grid desktop-control-note">
-          <span><strong>GUIDA</strong> · <kbd>W</kbd>/<kbd>↑</kbd> gas · <kbd>S</kbd>/<kbd>↓</kbd> freno · <kbd>A</kbd>/<kbd>D</kbd> sterza e scegli la strada</span>
-          <span><strong>AZIONE</strong> · <kbd>SHIFT</kbd>/<kbd>X</kbd> drift controllato · <kbd>SPAZIO</kbd> freno a mano · <kbd>Z</kbd> retromarcia</span>
-          <span><strong>DIFESA</strong> · <kbd>Q</kbd> missile davanti · <kbd>E</kbd> chiodi dietro</span>
-          <span><strong>OBIETTIVO</strong> · crea distanza, scegli le strade più rapide e completa la fuga. Se elimini tutte le pattuglie dopo metà percorso, vinci.</span>
+          <span class="guide-rule"><b>1 · VAI</b><em><kbd>W</kbd>/<kbd>↑</kbd> tieni premuto per accelerare</em></span>
+          <span class="guide-rule"><b>2 · SCEGLI</b><em><kbd>A</kbd>/<kbd>D</kbd> indica la strada al bivio</em></span>
+          <span class="guide-rule"><b>3 · DIFENDITI</b><em><kbd>E</kbd> chiodi dietro · <kbd>Q</kbd> missile davanti</em></span>
+          <span class="guide-rule guide-rule--goal"><b>OBIETTIVO</b><em>arriva in fondo senza farti bloccare</em></span>
+          <span class="guide-extra">Extra: <kbd>SHIFT</kbd>/<kbd>X</kbd> drift · <kbd>SPAZIO</kbd> freno a mano · <kbd>Z</kbd> retromarcia. Il gioco ti suggerisce le azioni quando servono.</span>
         </div>
         <div class="controls-grid mobile-control-note">
-          <span><strong>GUIDA</strong> · joystick a destra: gas, sterzo e retromarcia</span>
-          <span><strong>AZIONE</strong> · DRIFT a sinistra · FRENO A MANO al centro</span>
-          <span><strong>DIFESA</strong> · usa MISSILE e CHIODI sul lato sinistro quando la polizia si avvicina</span>
-          <span><strong>OBIETTIVO</strong> · crea distanza, leggi i bivi e raggiungi la fine della fuga</span>
+          <span class="guide-rule"><b>1 · VAI</b><em>spingi il joystick verso l’alto</em></span>
+          <span class="guide-rule"><b>2 · SCEGLI</b><em>al bivio sposta il joystick a sinistra o destra</em></span>
+          <span class="guide-rule"><b>3 · DIFENDITI</b><em>tocca CHIODI dietro · MISSILE davanti</em></span>
+          <span class="guide-rule guide-rule--goal"><b>OBIETTIVO</b><em>arriva in fondo senza farti bloccare</em></span>
+          <span class="guide-extra">DRIFT e FRENO A MANO sono extra: puoi impararli giocando.</span>
         </div>
       </div>
-      <button id="startButton" class="primary-button">AVVIA LA FUGA <span>↗</span></button>
+      <button id="startButton" class="primary-button">PARTI <span>↗</span></button>
     </div>
-    <div class="menu-footer"><span>Guida: ASSIST · consigliato</span><i></i><span>Difficoltà: 1–4 pattuglie</span><i></i><span>Desktop + iPhone/iPad</span></div>
+    <div class="menu-footer"><span>ASSIST consigliato</span><i></i><span>Difficoltà: 1–4 pattuglie</span><i></i><span>Desktop + iPhone/iPad</span></div>
   </main>
 
   <section id="hud" class="hud hidden" aria-live="polite">
@@ -61,7 +63,7 @@
     <div class="hud-top-right">
       <div class="heat-label"><span>RICERCA</span><span id="heatText">★★★☆☆</span></div><div class="heat-track"><div id="heatBar" class="heat-fill"></div></div><div id="copDistance" class="cop-distance">POLIZIA PIÙ VICINA: 120 m</div>
     </div>
-    <div id="junctionHint" class="junction-hint hidden"><span class="junction-kicker">BIVIO IN ARRIVO</span><strong id="junctionText">Scegli una traiettoria</strong></div>
+    <div id="junctionHint" class="junction-hint hidden"><span class="junction-kicker">BIVIO</span><strong id="junctionText">Scegli una strada</strong></div>
     <div class="hud-bottom-left"><div class="mini-legend"><span class="dot dot--you"></span> TU</div><div class="mini-legend"><span class="dot dot--cop"></span> POLIZIA</div><div class="mini-legend"><span class="dot dot--traffic"></span> TRAFFICO</div></div>
     <button id="pauseButton" class="icon-button" aria-label="Pausa">Ⅱ</button>
   </section>
@@ -69,7 +71,7 @@
   <section id="touchControls" class="touch-controls hidden" aria-label="Controlli touch">
     <div class="touch-zone touch-zone--steer" aria-label="Joystick di guida: gas, sterzo e retromarcia">
       <div id="steeringJoystick" class="steering-joystick" role="slider" aria-label="Joystick di guida; avanti per gas, indietro per retromarcia, lateralmente per scegliere la strada" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="0" aria-valuetext="Sterzo 0%">
-        <div class="joystick-knob"></div><span class="joystick-label">STERZO</span>
+        <div class="joystick-knob"></div><span class="joystick-label">GUIDA</span>
       </div>
     </div>
     <div class="touch-zone touch-zone--center" aria-label="Freno a mano">
@@ -128,6 +130,6 @@
   <script src="src/gameplay-final-v1.js?v=20260820-2"></script>
   <script src="src/driving-controller-v3.js?v=20260820-1"></script>
   <script src="src/elevated-drive.js?v=20260820-1"></script>
-  <script src="src/onboarding-v2.js?v=20260820-1"></script>
+  <script src="src/onboarding-v2.js?v=20260821-1"></script>
 </body>
 </html>
