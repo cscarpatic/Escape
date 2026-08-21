@@ -4,63 +4,71 @@
   const baseHandleCollisions=Game.prototype.handleCollisions;
 
   function isAssist(){return window.NightDriveMode!=='manual';}
-  function orientedRoadAngle(info,carAngle){
-    let angle=Math.atan2(info.ty,info.tx);
-    if(Math.cos(angleWrap(angle-carAngle))<0)angle+=Math.PI;
-    return angle;
-  }
-
   function requestedSteer(){
     const left=keys.has('ArrowLeft')||keys.has('KeyA');
     const right=keys.has('ArrowRight')||keys.has('KeyD');
     const keyboard=(right?1:0)-(left?1:0);
     return clamp(keyboard||input.steer||0,-1,1);
   }
+  function orientedRoadAngle(info,carAngle){
+    let angle=Math.atan2(info.ty,info.tx);
+    if(Math.cos(angleWrap(angle-carAngle))<0)angle+=Math.PI;
+    return angle;
+  }
 
   Game.prototype.updatePlayer=function(dt){
-    const assistMode=isAssist();
-    const steerBefore=requestedSteer();
-    const activeSteer=Math.abs(steerBefore)>.10;
-    const savedMode=window.NightDriveMode;
-
-    // While the player is actively steering in ASSIST, temporarily suspend road-heading
-    // correction. The unified controller still applies the real steering physics, but it
-    // cannot pull the car back toward a previously selected route in the same frame.
-    if(assistMode&&activeSteer)window.NightDriveMode='manual';
-    try{
-      baseUpdatePlayer.call(this,dt);
-    }finally{
-      if(assistMode&&activeSteer)window.NightDriveMode=savedMode;
-    }
-    if(!assistMode)return;
-
     const p=this.player;
-    if(!p||p._drift?.active||keys.has('Space')||p.speed<0||(input.reverse||0)>.06||keys.has('KeyZ'))return;
+    const assistMode=isAssist();
+    const steer=requestedSteer();
+    const activeSteer=Math.abs(steer)>.08;
+    const angleBefore=p?.angle||0;
+
+    // A manual request must always override an automatic route. Keep the requested branch
+    // available to the central controller, but never let an old automatic route fight it.
+    if(assistMode&&activeSteer&&p){
+      p._roadAssist ||= {route:null,intent:null};
+      p._roadAssist.intent={
+        dir:Math.sign(steer),
+        strength:clamp(Math.abs(steer),0,1),
+        expires:performance.now()+1350
+      };
+      if(p._roadAssist.route?.automatic)p._roadAssist.route=null;
+    }
+
+    baseUpdatePlayer.call(this,dt);
+    if(!assistMode||!p)return;
+
+    // Hard guarantee: while steering, the car angle must actually move in the requested
+    // direction. This runs after every other driving module, so road assist, route selection
+    // and steering smoothing cannot cancel a left (or right) command.
+    if(activeSteer&&!p._drift?.active&&!keys.has('Space')&&Math.abs(p.speed)>8){
+      const motionSign=p.speed>=0?1:-1;
+      const requestedDir=Math.sign(steer)*motionSign;
+      const speedScale=clamp(Math.abs(p.speed)/100,.32,1.75);
+      const minMagnitude=Math.abs(steer)*1.22*speedScale*dt;
+      const minDelta=requestedDir*minMagnitude;
+      const actualDelta=angleWrap(p.angle-angleBefore);
+
+      if((requestedDir<0&&actualDelta>minDelta)||(requestedDir>0&&actualDelta<minDelta)){
+        p.angle=angleBefore+minDelta;
+      }
+
+      // Remove opposite residual steering immediately. A previous right turn must never
+      // delay a new left command (and vice versa).
+      if(Math.sign(p.steer||0)!==Math.sign(steer))p.steer=steer*.72;
+    }
 
     const rawSteer=requestedSteer();
     const manual=Math.abs(rawSteer);
-
-    // Recreate branch intent after the temporary manual frame. This means a held or tapped
-    // A/Left always requests the left branch and D/Right always requests the right branch.
-    if(manual>.08){
-      p._roadAssist ||= {route:null,intent:null};
-      p._roadAssist.intent={
-        dir:Math.sign(rawSteer),
-        strength:clamp(manual,0,1),
-        expires:performance.now()+1250
-      };
-      // Do not let an automatic route chosen before the key press keep fighting the player.
-      if(p._roadAssist.route?.automatic)p._roadAssist.route=null;
-    }
+    if(p._drift?.active||keys.has('Space')||p.speed<0||(input.reverse||0)>.06||keys.has('KeyZ'))return;
 
     const info=this.road?.nearestInfo?.(p.x,p.y);
     if(!info?.path)return;
     const width=info.path.width||this.env.roadWidth||160;
     const onRamp=!!p._activeRampId;
 
-    // Recovery assistance acts only after steering is released. It never opposes A/Left,
-    // D/Right or the touch joystick while the player is asking for a turn.
-    if(manual<.10&&!onRamp){
+    // Recovery only after release: it cannot oppose an active turn.
+    if(manual<.08&&!onRamp){
       const roadAngle=orientedRoadAngle(info,p.angle);
       if(info.d<width*.76){
         const edge=clamp((info.d-width*.38)/(width*.38),0,1);
