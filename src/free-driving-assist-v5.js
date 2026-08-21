@@ -1,6 +1,8 @@
 (() => {
   const input=window.NightDriveInput=window.NightDriveInput||{steer:0,throttle:0,reverse:0};
-  const baseUpdatePlayer=Game.prototype.updatePlayer;
+  const manualUpdatePlayer=Game.prototype.updatePlayer;
+  const METERS_PER_UNIT=window.NIGHT_HEIST_METERS_PER_UNIT||(1.42/3.6);
+  const DRIFT_CODES=['ShiftLeft','ShiftRight','KeyX'];
 
   function isAssist(){return window.NightDriveMode!=='manual';}
   function requestedSteer(){
@@ -9,68 +11,80 @@
     const keyboard=(right?1:0)-(left?1:0);
     return clamp(keyboard||input.steer||0,-1,1);
   }
+  function driftHeld(){return DRIFT_CODES.some(code=>keys.has(code));}
 
   Game.prototype.updatePlayer=function(dt){
-    if(!isAssist())return baseUpdatePlayer.call(this,dt);
+    if(!isAssist())return manualUpdatePlayer.call(this,dt);
 
     const p=this.player;
-    if(!p)return baseUpdatePlayer.call(this,dt);
+    if(!p)return;
+
+    // ASSIST FREE DRIVE: this path intentionally does not call nearestInfo(), route assist,
+    // lane assist, branch selection or any road-centering code. Roads are scenery/navigation
+    // only. The car keeps its current heading until the player explicitly steers.
+    if(p._roadAssist){p._roadAssist.route=null;p._roadAssist.intent=null;}
+    if(p._drift){p._drift.active=false;p._drift.hold=0;p._drift.dir=0;}
+    p._activeRampId=null;
+    p._rampType=null;
+    if(this.road){this.road._activeRampId=null;this.road._preferredLevel=0;}
 
     const steer=requestedSteer();
-    const turning=Math.abs(steer)>.08;
-    const angleBefore=p.angle;
-    const savedMode=window.NightDriveMode;
-    const road=this.road;
-    const originalNearest=road?.nearestInfo;
+    const keyThrottle=keys.has('ArrowUp')||keys.has('KeyW');
+    const keyBrake=keys.has('ArrowDown')||keys.has('KeyS');
+    const keyReverse=keys.has('KeyZ');
+    const hand=keys.has('Space');
+    const drift=driftHeld();
+    const throttle=keyThrottle?1:clamp(input.throttle||0,0,1);
+    const reversePower=keyReverse?1:clamp(input.reverse||0,0,1);
+    const reversing=reversePower>.06;
 
-    // ASSIST is now free driving: roads are visual/navigation cues, not invisible rails.
-    // Disable route selection and lane/road heading correction for the whole physics step.
-    if(p._roadAssist){p._roadAssist.route=null;p._roadAssist.intent=null;}
-    window.NightDriveMode='manual';
-
-    // Keep normal asphalt acceleration everywhere in ASSIST so leaving a lane/road does not
-    // suddenly slow the car down. We preserve the nearest path data for ramps and other systems,
-    // but report zero lateral distance only during the driving physics step.
-    if(road&&typeof originalNearest==='function'){
-      road.nearestInfo=function(x,y){
-        const info=originalNearest.call(road,x,y);
-        return info?.path?{...info,d:0}:info;
-      };
-    }
-
-    // A new turn command should respond immediately instead of carrying steering inertia from
-    // the previous direction.
-    if(turning&&Math.sign(p.steer||0)!==Math.sign(steer))p.steer=steer*.86;
-
-    try{
-      baseUpdatePlayer.call(this,dt);
-    }finally{
-      window.NightDriveMode=savedMode;
-      if(road&&typeof originalNearest==='function')road.nearestInfo=originalNearest;
-    }
-
-    if(p._roadAssist){p._roadAssist.route=null;p._roadAssist.intent=null;}
-
-    if(turning&&!p._drift?.active&&!keys.has('Space')&&Math.abs(p.speed)>8){
-      // Explicit steering belongs entirely to the player. Guarantee a minimum turn response
-      // in either direction so left and right remain perfectly symmetric.
-      const motionSign=p.speed>=0?1:-1;
-      const requestedDir=Math.sign(steer)*motionSign;
-      const speedScale=clamp(Math.abs(p.speed)/105,.34,1.55);
-      const minimum=Math.abs(steer)*1.18*speedScale*dt;
-      const actual=angleWrap(p.angle-angleBefore);
-      if((requestedDir<0&&actual>-minimum)||(requestedDir>0&&actual<minimum)){
-        p.angle=angleBefore+requestedDir*minimum;
+    // Same acceleration everywhere: leaving a lane or road has no hidden penalty in ASSIST.
+    if(reversing){
+      if(p.speed>2)p.speed=Math.max(0,p.speed-190*dt);
+      else p.speed-=lerp(52,96,reversePower)*dt;
+    }else{
+      if(throttle>.025)p.speed+=122*throttle*dt;
+      else if(p.speed>0)p.speed=Math.max(0,p.speed-18*dt);
+      else if(p.speed<0)p.speed=Math.min(0,p.speed+32*dt);
+      if(keyBrake){
+        if(p.speed>0)p.speed=Math.max(0,p.speed-180*dt);
+        else if(p.speed<0)p.speed=Math.min(0,p.speed+120*dt);
       }
-    }else if(!p._drift?.active&&!keys.has('Space')&&p.speed>=0){
-      // No turn command: hold the current heading and quickly centre the virtual steering.
-      // The car therefore keeps going forward cleanly until the player explicitly turns again.
-      p.angle=angleLerp(p.angle,angleBefore,clamp(dt*11,0,.30));
-      p.steer=lerp(p.steer,0,clamp(dt*13,0,1));
+    }
+    if(hand)p.speed*=Math.pow(.72,dt*8);
+    if(drift&&Math.abs(steer)>.08)p.speed*=Math.pow(.88,dt*5);
+    p.speed=clamp(p.speed,reversing?-52:-18,228);
+
+    const turning=Math.abs(steer)>.055;
+    if(turning){
+      // Direction changes are explicit and perfectly symmetric. A/Left is negative,
+      // D/Right is positive. Reversing naturally flips the steering direction.
+      const response=1-Math.exp(-dt*16);
+      if(Math.sign(p.steer||0)!==Math.sign(steer))p.steer=steer*.82;
+      p.steer=lerp(p.steer,steer,response);
+      const speedFactor=clamp(Math.abs(p.speed)/115,.38,1.55);
+      const turnRate=(hand?2.05:drift?2.25:1.62)*speedFactor;
+      const motionSign=p.speed>=0?1:-1;
+      p.angle+=p.steer*turnRate*dt*motionSign;
+      if((hand||drift)&&Math.abs(p.speed)>45&&Math.random()<dt*18){
+        this.spawnSmoke?.(p.x-Math.cos(p.angle)*22,p.y-Math.sin(p.angle)*22);
+      }
+    }else{
+      // No steering command means exactly that: hold the heading. No road tangent, no lane
+      // centre and no previous branch may rotate the car after the player releases the control.
+      p.steer=lerp(p.steer,0,clamp(dt*18,0,1));
+      if(Math.abs(p.steer)<.015)p.steer=0;
     }
 
-    p.offroad=lerp(p.offroad,0,clamp(dt*8,0,1));
+    const vx=Math.cos(p.angle)*p.speed;
+    const vy=Math.sin(p.angle)*p.speed;
+    p.x+=vx*dt;
+    p.y+=vy*dt;
+
+    if(!reversing&&p.speed>0)this.distance+=p.speed*dt*METERS_PER_UNIT;
+    this.maxSpeed=Math.max(this.maxSpeed,Math.abs(p.speed)*1.42);
+    p.offroad=0;
   };
 
-  window.NightHeistAssistStyle='free-drive';
+  window.NightHeistAssistStyle='free-drive-independent-v6';
 })();
