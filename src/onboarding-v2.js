@@ -32,8 +32,8 @@
   function syncModeHelp(){
     const manual=window.NightDriveMode==='manual';
     modeHelp.innerHTML=manual
-      ? '<strong>FULL MANUAL</strong> · tutto lo sterzo è nelle tue mani.'
-      : '<strong>ASSIST · consigliato</strong> · tu scegli la direzione, l’auto ti aiuta a seguire la strada.';
+      ? '<strong>MANUALE</strong> · più tecnico: nessuna facilitazione extra.'
+      : '<strong>ARCADE · consigliato</strong> · sterzo libero; sull’asfalto vai forte e fai progressi.';
   }
   if(modeBox){modeBox.appendChild(modeHelp);modeBox.addEventListener('click',()=>setTimeout(syncModeHelp,0));syncModeHelp();}
 
@@ -59,9 +59,9 @@
       done:g=>Math.abs(g?.player?.speed||0)>82
     },
     {
-      title:'2 · SCEGLI',
-      desktop:'Al bivio tocca A o D. In ASSIST basta indicare la direzione.',
-      touch:'Al bivio sposta il joystick a sinistra o destra.',
+      title:'2 · STERZA',
+      desktop:'Sterza con A / D. Al bivio entra fisicamente nella strada che vuoi.',
+      touch:'Sterza col joystick. Al bivio entra fisicamente nella strada che vuoi.',
       done:()=>keys.has('KeyA')||keys.has('KeyD')||keys.has('ArrowLeft')||keys.has('ArrowRight')||Math.abs(window.NightDriveInput?.steer||0)>.22
     }
   ];
@@ -86,9 +86,9 @@
   function showCommands(){
     coreActive=false;manualHelp=true;
     const copy=coarse()
-      ? 'JOYSTICK = guida · DRIFT = curva stretta · MISSILE davanti · CHIODI dietro.'
-      : 'W/↑ = gas · A/D = direzione · SHIFT = drift · Q = missile · E = chiodi.';
-    setCoach('COMANDI ESSENZIALI','SCAPPA. SCEGLI. DIFENDITI.',copy,6500);
+      ? 'JOYSTICK = guida · resta sull’asfalto · DRIFT = curva stretta · MISSILE davanti · CHIODI dietro.'
+      : 'W/↑ = gas · A/D = sterzo · resta sull’asfalto · SHIFT = drift · Q = missile · E = chiodi.';
+    setCoach('COMANDI ESSENZIALI','SCAPPA. STERZA. DIFENDITI.',copy,6500);
   }
   help.addEventListener('click',showCommands);
 
