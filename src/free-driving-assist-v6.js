@@ -110,53 +110,13 @@
         : '<strong>ARCADE · consigliato</strong> · sterzo libero; sull’asfalto vai forte e fai progressi.';
     }
 
-    const rules = [...document.querySelectorAll('.guide-rule')];
-    for (const rule of rules) {
-      const title = rule.querySelector('b');
-      const copy = rule.querySelector('em');
-      if (!title || !copy) continue;
-      if (title.textContent.includes('2 ·')) {
-        title.textContent = '2 · STERZA';
-        copy.innerHTML = isCoarsePointer()
-          ? 'al bivio entra nella strada che vuoi'
-          : '<kbd>A</kbd>/<kbd>D</kbd> sterza · al bivio entra nella strada che vuoi';
-      }
-    }
-
-    const extras = document.querySelectorAll('.guide-extra');
-    extras.forEach(extra => {
-      if (extra.dataset.arcadeRoadRule) return;
-      extra.dataset.arcadeRoadRule = '1';
-      extra.insertAdjacentHTML('beforeend', ' · <strong>Fuori strada rallenti e non fai progressi.</strong>');
-    });
-  }
-
-  function patchCoachCopy() {
-    const coach = document.querySelector('.play-coach');
-    if (!coach || coach.classList.contains('hidden')) return;
-    const title = coach.querySelector('strong');
-    const copy = coach.querySelector('small');
-    if (!title || !copy) return;
-
-    if (title.textContent === '2 · SCEGLI' || title.textContent === '2 · STERZA') {
-      title.textContent = '2 · STERZA';
-      const desired = isCoarsePointer()
-        ? 'Sterza col joystick. Al bivio entra fisicamente nella strada che vuoi.'
-        : 'Sterza con A / D. Al bivio entra fisicamente nella strada che vuoi.';
-      if (copy.textContent !== desired) copy.textContent = desired;
-    }
   }
 
   syncGuideCopy();
-  const coach = document.querySelector('.play-coach');
-  if (coach) new MutationObserver(patchCoachCopy).observe(coach, { childList:true, subtree:true, characterData:true, attributes:true });
 
   document.addEventListener('click', event => {
     if (!event.target.closest?.('[data-drive-mode]')) return;
-    setTimeout(() => {
-      syncGuideCopy();
-      patchCoachCopy();
-    }, 0);
+    setTimeout(syncGuideCopy, 0);
   });
 
   Game.prototype.updatePlayer = function(dt) {
