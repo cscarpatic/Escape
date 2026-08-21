@@ -87,4 +87,6 @@
   };
 
   window.NightHeistAssistStyle='free-drive-independent-v6';
+  const assistButton=document.querySelector('[data-drive-mode="assist"]');
+  if(assistButton)assistButton.textContent='ASSIST LIBERO';
 })();
