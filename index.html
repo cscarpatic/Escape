@@ -26,7 +26,7 @@
   <main id="menu" class="panel panel--menu">
     <div class="eyebrow">GETAWAY / NIGHT PURSUIT</div>
     <h1>NIGHT <span>HEIST</span> ESCAPE</h1>
-    <p class="subtitle">Scappa dalla polizia, scegli la strada giusta e porta il bottino al sicuro.</p>
+    <p class="subtitle">Scappa dalla polizia e raggiungi il punto USCITA verde indicato sulla mappa.</p>
     <section class="environment-grid" id="environmentGrid" aria-label="Seleziona ambiente"></section>
     <div class="menu-row">
       <div class="controls-card">
@@ -35,14 +35,14 @@
           <span class="guide-rule"><b>1 · VAI</b><em><kbd>W</kbd>/<kbd>↑</kbd> tieni premuto per accelerare</em></span>
           <span class="guide-rule"><b>2 · STERZA</b><em><kbd>A</kbd>/<kbd>D</kbd> sterza · al bivio entra nella strada che vuoi</em></span>
           <span class="guide-rule"><b>3 · DIFENDITI</b><em><kbd>E</kbd> chiodi dietro · <kbd>Q</kbd> missile davanti</em></span>
-          <span class="guide-rule guide-rule--goal"><b>OBIETTIVO</b><em>arriva in fondo senza farti bloccare</em></span>
+          <span class="guide-rule guide-rule--goal"><b>OBIETTIVO</b><em>raggiungi USCITA verde indicata sulla mappa</em></span>
           <span class="guide-extra">Extra: <kbd>SHIFT</kbd>/<kbd>X</kbd> drift · <kbd>SPAZIO</kbd> freno a mano · <kbd>Z</kbd> retromarcia. Fuori strada rallenti e non fai progressi.</span>
         </div>
         <div class="controls-grid mobile-control-note">
           <span class="guide-rule"><b>1 · VAI</b><em>spingi il joystick verso l’alto</em></span>
           <span class="guide-rule"><b>2 · STERZA</b><em>al bivio entra nella strada che vuoi</em></span>
           <span class="guide-rule"><b>3 · DIFENDITI</b><em>tocca CHIODI dietro · MISSILE davanti</em></span>
-          <span class="guide-rule guide-rule--goal"><b>OBIETTIVO</b><em>arriva in fondo senza farti bloccare</em></span>
+          <span class="guide-rule guide-rule--goal"><b>OBIETTIVO</b><em>raggiungi USCITA verde indicata sulla mappa</em></span>
           <span class="guide-extra">DRIFT e FRENO A MANO sono extra. Fuori strada rallenti e non fai progressi.</span>
         </div>
       </div>
@@ -58,13 +58,13 @@
       <div class="metric"><span class="metric-label">DISTANZA</span><strong id="distanceValue">0.0 km</strong></div>
     </div>
     <div class="hud-center">
-      <div class="objective-label">SEMINA LE PATTUGLIE</div><div class="progress-track"><div id="escapeProgress" class="progress-fill"></div></div><div id="objectiveText" class="objective-text">0 / 8.0 km</div>
+      <div class="objective-label">RAGGIUNGI L’USCITA VERDE</div><div class="progress-track"><div id="escapeProgress" class="progress-fill"></div></div><div id="objectiveText" class="objective-text">USCITA · --</div>
     </div>
     <div class="hud-top-right">
       <div class="heat-label"><span>RICERCA</span><span id="heatText">★★★☆☆</span></div><div class="heat-track"><div id="heatBar" class="heat-fill"></div></div><div id="copDistance" class="cop-distance">POLIZIA PIÙ VICINA: 120 m</div>
     </div>
     <div id="junctionHint" class="junction-hint hidden"><span class="junction-kicker">BIVIO</span><strong id="junctionText">Scegli una strada</strong></div>
-    <div class="hud-bottom-left"><div class="mini-legend"><span class="dot dot--you"></span> TU</div><div class="mini-legend"><span class="dot dot--cop"></span> POLIZIA</div><div class="mini-legend"><span class="dot dot--traffic"></span> TRAFFICO</div></div>
+    <div class="hud-bottom-left"><div class="mini-legend"><span class="dot dot--you"></span> TU</div><div class="mini-legend"><span class="dot dot--cop"></span> POLIZIA</div><div class="mini-legend"><span class="dot dot--traffic"></span> TRAFFICO</div><div class="mini-legend" data-exit-legend="1"><span class="dot" style="background:#73ff9d;box-shadow:0 0 10px #73ff9d"></span> USCITA</div></div>
     <button id="pauseButton" class="icon-button" aria-label="Pausa">Ⅱ</button>
   </section>
 
@@ -131,6 +131,7 @@
   <script src="src/driving-controller-v3.js?v=20260820-1"></script>
   <script src="src/elevated-drive.js?v=20260820-1"></script>
   <script src="src/free-driving-assist-v6.js?v=20260821-1"></script>
+  <script src="src/escape-exit-v1.js?v=20260823-1"></script>
   <script src="src/onboarding-v2.js?v=20260821-1"></script>
 </body>
 </html>
