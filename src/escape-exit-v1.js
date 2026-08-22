@@ -37,6 +37,30 @@
     return score;
   }
 
+  function reachablePathIds(g) {
+    const road = g.road;
+    if (!road?.nodeMap) return null;
+    const start = road.nearestInfo?.(g.player.x, g.player.y)?.path;
+    if (!start?.id || !start.nodeA || !start.nodeB) return null;
+
+    const byId = new Map((road.paths || []).filter(path => path?.id).map(path => [path.id, path]));
+    const seen = new Set([start.id]);
+    const queue = [start];
+    for (let qi = 0; qi < queue.length; qi++) {
+      const path = queue[qi];
+      for (const nodeId of [path.nodeA, path.nodeB]) {
+        const node = road.nodeMap.get(nodeId);
+        for (const edgeId of node?.edges || []) {
+          const next = byId.get(edgeId);
+          if (!next || next.closed || seen.has(edgeId)) continue;
+          seen.add(edgeId);
+          queue.push(next);
+        }
+      }
+    }
+    return seen;
+  }
+
   function ensureExit(g) {
     if (!g?.player || !g.road) return null;
     if (g._escapeExit) return g._escapeExit;
@@ -45,9 +69,11 @@
     const desiredY = START_Y - targetWorld;
     let best = null;
     let bestScore = Infinity;
+    const reachable = reachablePathIds(g);
 
     for (const path of g.road.paths || []) {
       if (!path?.points?.length || path.closed) continue;
+      if (reachable && path.id && !reachable.has(path.id)) continue;
       const penalty = pathPenalty(path);
       for (let i = 0; i < path.points.length; i++) {
         const point = path.points[i];
