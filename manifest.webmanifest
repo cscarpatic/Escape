@@ -1,0 +1,12 @@
+{
+  "name": "Night Heist Escape",
+  "short_name": "Night Heist",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "landscape",
+  "background_color": "#020508",
+  "theme_color": "#05070b",
+  "description": "Arcade getaway 2D top-down ottimizzato per iPhone e iPad in orizzontale."
+}

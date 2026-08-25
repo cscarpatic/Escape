@@ -1,0 +1,74 @@
+/* Adaptive iPhone/iPad landscape-first game shell. Loaded last so it can safely tune existing UI. */
+:root{--ui-scale:1;--touch-scale:1;--hud-gap:14px;--safe-top:max(8px,env(safe-area-inset-top));--safe-right:max(10px,env(safe-area-inset-right));--safe-bottom:max(10px,env(safe-area-inset-bottom));--safe-left:max(10px,env(safe-area-inset-left))}
+html,body{width:100%;height:100%;min-height:100%;margin:0;overflow:hidden;overscroll-behavior:none;background:#020508}
+body.touch-device{position:fixed;inset:0;width:100%;height:100%;min-height:100dvh;overflow:hidden}
+body.touch-device #game{position:fixed;inset:0;width:100vw!important;height:100dvh!important;max-width:none;max-height:none}
+body.touch-device.game-active{touch-action:none}
+
+/* Runtime classes are based on real viewport size, not model names alone. */
+body.device-phone-small{--ui-scale:.78;--touch-scale:.80;--hud-gap:8px}
+body.device-phone{--ui-scale:.88;--touch-scale:.90;--hud-gap:10px}
+body.device-phone-large{--ui-scale:.96;--touch-scale:.98;--hud-gap:12px}
+body.device-ipad-compact{--ui-scale:1.02;--touch-scale:1.04;--hud-gap:14px}
+body.device-ipad-large{--ui-scale:1.12;--touch-scale:1.12;--hud-gap:18px}
+
+/* Landscape gate: the game is intentionally not playable in portrait on touch devices. */
+.landscape-gate{display:none;position:fixed;inset:0;z-index:1000;align-items:center;justify-content:center;padding:calc(28px + env(safe-area-inset-top)) calc(28px + env(safe-area-inset-right)) calc(28px + env(safe-area-inset-bottom)) calc(28px + env(safe-area-inset-left));background:radial-gradient(circle at 50% 45%,rgba(14,31,42,.98),rgba(2,6,10,.995) 68%);color:#eefaff;text-align:center;touch-action:none}
+body.touch-device.is-portrait .landscape-gate{display:flex}
+.landscape-gate__card{width:min(420px,86vw);padding:26px 24px;border:1px solid rgba(126,232,255,.28);border-radius:24px;background:rgba(5,12,18,.84);box-shadow:0 24px 70px rgba(0,0,0,.52),inset 0 0 36px rgba(93,223,244,.05)}
+.landscape-gate__icon{display:block;font-size:46px;line-height:1;margin-bottom:16px;animation:landscapeTurn 1.8s ease-in-out infinite}
+.landscape-gate strong{display:block;font:950 20px/1.1 system-ui,sans-serif;letter-spacing:.08em}.landscape-gate small{display:block;margin-top:10px;color:rgba(230,244,250,.70);font:700 12px/1.5 system-ui,sans-serif}
+@keyframes landscapeTurn{0%,100%{transform:rotate(0)}50%{transform:rotate(90deg)}}
+
+/* HUD scales independently from the canvas. */
+body.touch-device .hud-top-left,body.touch-device .hud-top-right{top:var(--safe-top)}
+body.touch-device .hud-top-left{left:var(--safe-left);transform:scale(var(--ui-scale));transform-origin:top left}
+body.touch-device .hud-top-right{right:var(--safe-right);transform:scale(var(--ui-scale));transform-origin:top right}
+body.touch-device .hud-center{top:var(--safe-top);width:min(42vw,520px);transform:translateX(-50%) scale(var(--ui-scale));transform-origin:top center}
+body.touch-device .hud-bottom-left{left:var(--safe-left);bottom:var(--safe-bottom);transform:scale(var(--ui-scale));transform-origin:bottom left}
+body.touch-device .junction-hint{top:18%;transform:translateX(-50%) scale(var(--ui-scale));transform-origin:center}
+body.touch-device #pauseButton{right:50%;bottom:var(--safe-bottom);transform:translateX(50%) scale(var(--ui-scale));transform-origin:bottom center}
+
+/* Touch controls: actual physical size scales with screen class. */
+body.touch-device .steering-joystick{width:calc(148px * var(--touch-scale));height:calc(148px * var(--touch-scale))}
+body.touch-device .steering-joystick .joystick-knob{width:calc(60px * var(--touch-scale));height:calc(60px * var(--touch-scale))}
+body.touch-device .touch-zone--steer{right:calc(var(--safe-right) + 4px);bottom:calc(var(--safe-bottom) + 8px)}
+body.touch-device .touch-zone--pedals{left:calc(var(--safe-left) + 4px)!important;bottom:calc(var(--safe-bottom) + 8px);gap:calc(10px * var(--touch-scale))}
+body.touch-device .touch-zone--pedals .touch-control--drift{width:calc(96px * var(--touch-scale));height:calc(96px * var(--touch-scale));min-width:64px;min-height:64px;border-radius:calc(25px * var(--touch-scale))}
+body.touch-device .touch-control--pedal{width:calc(76px * var(--touch-scale));height:calc(88px * var(--touch-scale));min-width:58px;min-height:66px;border-radius:calc(25px * var(--touch-scale))}
+body.touch-device .touch-zone--center{bottom:calc(var(--safe-bottom) + 8px)}
+body.touch-device .touch-zone--center .touch-control--handbrake{width:calc(104px * var(--touch-scale));height:calc(54px * var(--touch-scale));min-width:82px;min-height:44px}
+body.touch-device .joystick-label{font-size:calc(9px * var(--ui-scale));bottom:calc(-40px * var(--touch-scale))}
+
+/* Escape radar remains readable but never steals the driving area. */
+body.touch-device .police-radar{right:calc(var(--safe-right) + 2px);top:calc(var(--safe-top) + 58px * var(--ui-scale));width:calc(126px * var(--ui-scale));height:calc(126px * var(--ui-scale))}
+body.touch-device .police-radar-label{right:calc(var(--safe-right) + 5px);top:calc(var(--safe-top) + 190px * var(--ui-scale));max-width:calc(180px * var(--ui-scale));text-align:right;font-size:calc(8px * var(--ui-scale))}
+
+/* Phones: prioritize road visibility; hide secondary HUD detail. */
+body.device-phone-small .hud-top-left .metric:not(.metric--speed),body.device-phone-small .hud-bottom-left{display:none}
+body.device-phone-small .hud-center{width:44vw}
+body.device-phone-small .police-radar{width:96px;height:96px;top:calc(var(--safe-top) + 52px)}
+body.device-phone-small .police-radar-label{top:calc(var(--safe-top) + 153px);max-width:125px;font-size:7px}
+body.device-phone-small .joystick-label{display:none}
+body.device-phone .hud-bottom-left{display:none}
+
+/* Large iPads can afford a more spacious cockpit and full legend. */
+body.device-ipad-large .police-radar{width:158px;height:158px;top:calc(var(--safe-top) + 76px)}
+body.device-ipad-large .police-radar-label{top:calc(var(--safe-top) + 242px);font-size:9px}
+body.device-ipad-large .hud-center{width:min(40vw,600px)}
+body.device-ipad-large .touch-zone--steer,body.device-ipad-large .touch-zone--pedals{bottom:calc(var(--safe-bottom) + 18px)}
+
+/* Landscape menu adapts to short phones and roomy tablets. */
+body.touch-device.is-landscape .panel--menu{max-height:calc(100dvh - var(--safe-top) - var(--safe-bottom) - 12px);overflow:auto;overscroll-behavior:contain}
+body.device-phone-small .panel--menu{top:var(--safe-top);bottom:var(--safe-bottom);transform:translateX(-50%);padding:12px 16px;max-height:none}
+body.device-phone-small .panel--menu h1{font-size:clamp(28px,8.4vh,44px)}
+body.device-phone-small .panel--menu .subtitle{margin:5px 0 8px;font-size:10px}
+body.device-phone-small .environment-card{min-height:82px;padding:8px}.device-phone-small .environment-card h3{margin-top:7px}
+body.device-phone-small .menu-row{margin-top:7px}.device-phone-small .menu-footer{display:none}.device-phone-small .controls-card{font-size:9px}.device-phone-small .guide-rule{padding:6px!important}
+body.device-ipad-large .panel--menu{width:min(1180px,92vw);padding:28px 34px}
+
+/* Avoid stale portrait rules from older stylesheets. */
+body.touch-device.is-portrait .orientation-hint{display:none!important}
+body.touch-device.is-landscape .orientation-hint{display:none!important}
+
+@media (prefers-reduced-motion:reduce){.landscape-gate__icon{animation:none}}
