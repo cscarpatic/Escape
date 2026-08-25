@@ -4,11 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#05070b" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Night Heist" />
+  <meta name="screen-orientation" content="landscape" />
   <meta name="description" content="Night Heist Escape — inseguimento 2D top-down giorno/notte, pronto per GitHub Pages." />
   <title>Night Heist Escape</title>
+  <link rel="manifest" href="manifest.webmanifest?v=20260825-1" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="mobile.css" />
   <link rel="stylesheet" href="tuning.css" />
@@ -17,6 +20,7 @@
   <link rel="stylesheet" href="radar.css?v=20260818-1" />
   <link rel="stylesheet" href="experience-v2.css?v=20260819-1" />
   <link rel="stylesheet" href="touch-layout-v2.css?v=20260819-2" />
+  <link rel="stylesheet" href="device-adaptive-v1.css?v=20260825-1" />
 </head>
 <body>
   <canvas id="game" aria-label="Night Heist Escape"></canvas>
@@ -134,5 +138,6 @@
   <script src="src/escape-exit-v1.js?v=20260823-1"></script>
   <script src="src/game-feel-v1.js?v=20260823-1"></script>
   <script src="src/onboarding-v2.js?v=20260821-1"></script>
+  <script src="src/device-adaptive-v1.js?v=20260825-1"></script>
 </body>
 </html>
